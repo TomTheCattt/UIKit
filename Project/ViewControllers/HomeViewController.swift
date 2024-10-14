@@ -14,6 +14,7 @@ import UIKit
 class HomeViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
     // MARK: - Properties
+    weak var delegate: HomeViewControllerDelegate?
     
     // Table view to display categories
     private let tableView = UITableView()
@@ -38,7 +39,7 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
         title = "Home"
         
         // Add a button to the navigation bar to show the side menu
-        let sideMenuButton = UIBarButtonItem(title: "Menu", style: .plain, target: self, action: #selector(showSideMenu))
+        let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3"), style: .plain, target: self, action: #selector(showSideMenu))
         navigationItem.leftBarButtonItem = sideMenuButton
     }
 
@@ -108,7 +109,7 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     @objc private func showSideMenu() {
         // Logic to show the side menu
-        print("Side menu button tapped")
+        delegate?.didTapMenuButton()
     }
 }
 
