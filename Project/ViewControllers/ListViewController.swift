@@ -1,10 +1,3 @@
-//
-//  ListViewController.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 14/10/2024.
-//
-
 import UIKit
 import CoreData
 import Photos
@@ -12,66 +5,83 @@ import Photos
 class ListViewController: UIViewController {
     
     // MARK: - Properties
-    
     weak var delegate: ListViewControllerDelegate?
     var selectedCategory: CategoryType?
-    private var collectionView: UICollectionView!
+    
+    private var dataManager: ListViewDataManager!
     private var dataSource: [NSManagedObject] = []
+    
+    private lazy var loadingIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .large)
+        indicator.hidesWhenStopped = true
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        return indicator
+    }()
+    
+    private var collectionView: UICollectionView!
     private var noDataLabel: UILabel!
     private var updateFromAlbumButton: UIButton!
     private var updateFromLinkButton: UIButton!
-    private var urlInputView: URLInputView?
-    
-    private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupDataManager()
+        setupUI()
+        loadData()
+    }
+    
+    // MARK: - Setup
+    private func setupDataManager() {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        dataManager = ListViewDataManager(
+            context: appDelegate.persistentContainer.viewContext,
+            category: selectedCategory
+        )
+    }
+    
+    private func setupUI() {
         view.backgroundColor = .white
-        
         setupNavigationTitle()
         setupCollectionView()
         setupNavigationBar()
         setupNoDataLabel()
         setupUpdateButtons()
-        loadData()
+        setupLoadingIndicator()
     }
-    
-    // MARK: - UI Setup
     
     private func setupNavigationTitle() {
-        if let selectedCategory = selectedCategory {
-            switch selectedCategory {
-            case .image:
-                title = "All Images"
-            case .video:
-                title = "All Videos"
-            }
-        }
-    }
-    
-    private func setupNavigationBar() {
-        let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonTapped))
-        navigationItem.rightBarButtonItem = addButton
+        title = selectedCategory == .image ? "All Images" : "All Videos"
     }
     
     private func setupCollectionView() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
-        layout.minimumInteritemSpacing = 10
-        layout.minimumLineSpacing = 10
+        
+        if selectedCategory == .image {
+            layout.minimumInteritemSpacing = 0
+            layout.minimumLineSpacing = 1
+        } else {
+            layout.minimumLineSpacing = 1
+            layout.minimumInteritemSpacing = 0
+        }
         
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        collectionView.backgroundColor = .systemBackground
+        collectionView.backgroundColor = .white
         collectionView.delegate = self
         collectionView.dataSource = self
         
-        collectionView.register(VideoCell.self, forCellWithReuseIdentifier: "VideoCell")
-        collectionView.register(ImageCell.self, forCellWithReuseIdentifier: "ImageCell")
+        let cellIdentifier = selectedCategory == .image ? "ImageCell" : "VideoCell"
+        let cellClass = selectedCategory == .image ? ImageCell.self : VideoCell.self
+        collectionView.register(cellClass, forCellWithReuseIdentifier: cellIdentifier)
         
         view.addSubview(collectionView)
+    }
+    
+    private func setupNavigationBar() {
+        let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonTapped))
+        navigationItem.rightBarButtonItem = addButton
     }
     
     private func setupNoDataLabel() {
@@ -112,33 +122,37 @@ class ListViewController: UIViewController {
         ])
     }
     
-    // MARK: - Data Loading
-    
-    private func loadData() {
-        guard let category = selectedCategory else { return }
-        
-        let fetchRequest: NSFetchRequest<NSManagedObject>
-        switch category {
-        case .video:
-            fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppVideo")
-        case .image:
-            fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppImage")
-        }
-        
-        do {
-            dataSource = try context.fetch(fetchRequest)
-            dataSource.sort {
-                ($0.value(forKey: "title") as? String ?? "") < ($1.value(forKey: "title") as? String ?? "")
-            }
-        } catch {
-            print("Error fetching data: \(error)")
-        }
-        
-        updateUI()
+    private func setupLoadingIndicator() {
+        view.addSubview(loadingIndicator)
+        NSLayoutConstraint.activate([
+            loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
     }
     
-    // MARK: - UI Update
+    // MARK: - Data Loading
+    private func loadData() {
+        loadingIndicator.startAnimating()
+        dataManager.fetchData { [weak self] result in
+            DispatchQueue.main.async {
+                self?.loadingIndicator.stopAnimating()
+                self?.handleFetchResult(result)
+            }
+        }
+    }
     
+    private func handleFetchResult(_ result: Result<[NSManagedObject], Error>) {
+        switch result {
+        case .success(let fetchedData):
+            dataSource = fetchedData
+            updateUI()
+            notifyDelegate()
+        case .failure(let error):
+            showAlert(title: "Error", message: error.localizedDescription)
+        }
+    }
+    
+    // MARK: - UI Updates
     private func updateUI() {
         let isEmpty = dataSource.isEmpty
         collectionView.isHidden = isEmpty
@@ -151,224 +165,123 @@ class ListViewController: UIViewController {
         }
     }
     
-    // MARK: - Update Actions
+    private func notifyDelegate() {
+        delegate?.listViewController(
+            self,
+            didUpdateItemCount: dataSource.count,
+            forCategory: selectedCategory ?? .image
+        )
+    }
     
+    // MARK: - Actions
     @objc private func updateFromAlbumTapped() {
         requestPhotoLibraryAccess { [weak self] granted in
             guard granted else {
-                self?.showPhotoLibraryAccessDeniedAlert()
+                self?.showAlert(title: "Access Denied", message: "Please allow access to your photo library in Settings.")
                 return
             }
-            self?.selectedCategory == .image ? self?.fetchImagesFromAlbum() : self?.fetchVideosFromAlbum()
+            
+            DispatchQueue.main.async {
+                self?.fetchAssetsFromAlbum()
+            }
         }
     }
     
     @objc private func updateFromLinkTapped() {
-        // Placeholder for URL input and download logic
-        showURLInputView()
+        let dialog = URLInputDialog(presentingViewController: self)
+        dialog.delegate = self
+        dialog.present()
+    }
+    
+    @objc private func addButtonTapped() {
+        let actionSheet = UIAlertController(title: "Add New", message: nil, preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "Add from Album", style: .default) { [weak self] _ in
+            self?.updateFromAlbumTapped()
+        })
+        
+        actionSheet.addAction(UIAlertAction(title: "Add from Link", style: .default) { [weak self] _ in
+            self?.updateFromLinkTapped()
+        })
+        
+        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        present(actionSheet, animated: true)
     }
     
     // MARK: - Media Handling
-    
-    // MARK: - Download and Save to Album
+    private func fetchAssetsFromAlbum() {
+        loadingIndicator.startAnimating()
         
-        func downloadAndSaveMedia(from url: URL, isVideo: Bool, completion: @escaping (Bool) -> Void) {
-            let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-                guard let self = self, let data = data, error == nil else {
-                    DispatchQueue.main.async { completion(false) }
-                    return
-                }
-                
-                if isVideo {
-                    self.saveVideoToAlbum(data: data, completion: completion)
-                } else {
-                    self.saveImageToAlbum(data: data, completion: completion)
-                }
-            }
-            task.resume()
+        let fetchResult = PHAsset.fetchAssets(
+            with: selectedCategory == .image ? .image : .video,
+            options: PHFetchOptions()
+        )
+        
+        var assets: [PHAsset] = []
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(asset)
         }
         
-        private func saveImageToAlbum(data: Data, completion: @escaping (Bool) -> Void) {
-            guard let image = UIImage(data: data) else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            
-            PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            }) { success, error in
-                if success {
-                    self.fetchImagesFromAlbum()
-                }
-                DispatchQueue.main.async { completion(success) }
-            }
-        }
-        
-        private func saveVideoToAlbum(data: Data, completion: @escaping (Bool) -> Void) {
-            let tempUrl = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("tempVideo.mp4")
-            do {
-                try data.write(to: tempUrl)
-                PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: tempUrl)
-                }) { success, error in
-                    if success {
-                        self.fetchVideosFromAlbum()
-                    }
-                    DispatchQueue.main.async { completion(success) }
-                    try? FileManager.default.removeItem(at: tempUrl)
-                }
-            } catch {
-                DispatchQueue.main.async { completion(false) }
-            }
-        }
-    
-    private func fetchImagesFromAlbum() {
-        let fetchResult = PHAsset.fetchAssets(with: .image, options: PHFetchOptions())
-        fetchResult.enumerateObjects { [weak self] asset, _, _ in
-            self?.saveImageToCoreData(from: asset)
-        }
-        loadData()
-    }
-    
-    private func fetchVideosFromAlbum() {
-        let fetchResult = PHAsset.fetchAssets(with: .video, options: PHFetchOptions())
-        fetchResult.enumerateObjects { [weak self] asset, _, _ in
-            self?.saveVideoToCoreData(from: asset)
-        }
-        loadData()
-    }
-    
-    private func saveImageToCoreData(from asset: PHAsset) {
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.isSynchronous = true
-        options.deliveryMode = .highQualityFormat
-        
-        manager.requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: options) { [weak self] image, info in
-            guard let self = self, let image = image else { return }
-            
-            let newImage = AppImage(context: self.context)
-            newImage.id = UUID()
-            newImage.title = asset.localIdentifier
-            
-            // Save image to documents directory and get file path
-            if let imagePath = self.saveImageToDocuments(image: image, withName: newImage.id?.uuidString ?? "unknown") {
-                newImage.filepath = imagePath
-            }
-            
-            if let thumbnailData = image.jpegData(compressionQuality: 0.5) {
-                newImage.thumbnail = thumbnailData
-            }
-            
-            do {
-                try self.context.save()
-            } catch {
-                print("Error saving image to CoreData: \(error)")
-            }
-        }
-    }
-    
-    private func saveVideoToCoreData(from asset: PHAsset) {
-        let manager = PHImageManager.default()
-        let options = PHVideoRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
-        
-        manager.requestAVAsset(forVideo: asset, options: options) { [weak self] (avAsset, _, _) in
-            guard let self = self, let urlAsset = avAsset as? AVURLAsset else { return }
-            
-            let newVideo = AppVideo(context: self.context)
-            newVideo.id = UUID()
-            newVideo.title = asset.localIdentifier
-            newVideo.duration = asset.duration
-            
-            // Save video to documents directory and get file path
-            if let videoPath = self.saveVideoToDocuments(from: urlAsset.url, withName: newVideo.id?.uuidString ?? "unknown") {
-                newVideo.filepath = videoPath
-            }
-            
-            // Generate thumbnail
-            if let thumbnailImage = self.generateThumbnail(for: urlAsset) {
-                newVideo.thumbnail = thumbnailImage.jpegData(compressionQuality: 0.5)
-            }
-            
-            do {
-                try self.context.save()
-            } catch {
-                print("Error saving video to CoreData: \(error)")
-            }
-        }
-    }
-    
-    private func saveImageToDocuments(image: UIImage, withName name: String) -> String? {
-        guard let data = image.jpegData(compressionQuality: 1.0) else { return nil }
-        let filename = name + ".jpg"
-        let filepath = getDocumentsDirectory().appendingPathComponent(filename)
-        
-        do {
-            try data.write(to: filepath)
-            return filepath.path
-        } catch {
-            print("Error saving image to documents: \(error)")
-            return nil
-        }
-    }
-    
-    private func saveVideoToDocuments(from sourceURL: URL, withName name: String) -> String? {
-        let filename = name + ".mp4"
-        let destinationURL = getDocumentsDirectory().appendingPathComponent(filename)
-        
-        do {
-            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-            return destinationURL.path
-        } catch {
-            print("Error saving video to documents: \(error)")
-            return nil
-        }
-    }
-    
-    private func getDocumentsDirectory() -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    }
-    
-    private func generateThumbnail(for video: AVAsset) -> UIImage? {
-        let assetImgGenerate = AVAssetImageGenerator(asset: video)
-        assetImgGenerate.appliesPreferredTrackTransform = true
-        
-        let time = CMTimeMakeWithSeconds(1.0, preferredTimescale: 600)
-        do {
-            let img = try assetImgGenerate.copyCGImage(at: time, actualTime: nil)
-            return UIImage(cgImage: img)
-        } catch {
-            print("Error generating thumbnail: \(error)")
-            return nil
-        }
-    }
-    
-    private func downloadAndSaveMedia(from urlString: String) {
-        guard let url = URL(string: urlString) else {
-            showAlert(title: "Invalid URL", message: "Please enter a valid URL.")
-            return
-        }
-        
-        // Determine if it's a video or image based on the file extension
-        let isVideo = url.pathExtension.lowercased() == "mp4"
-        
-        downloadAndSaveMedia(from: url, isVideo: isVideo) { [weak self] success in
+        dataManager.saveMediaFromAssets(assets) { [weak self] result in
             DispatchQueue.main.async {
-                if success {
-                    self?.showAlert(title: "Success", message: "Media saved successfully.")
+                self?.loadingIndicator.stopAnimating()
+                
+                switch result {
+                case .success(let updateInfo):
+                    self?.showUpdateResultPopup(with: updateInfo)
                     self?.loadData()
-                    self?.updateUI()
-                } else {
-                    self?.showAlert(title: "Error", message: "Failed to download or save media.")
+                case .failure(let error):
+                    self?.showAlert(title: "Error", message: error.localizedDescription)
                 }
             }
         }
     }
     
-    // MARK: - Helper Functions
+    private func showUpdateResultPopup(with info: DataUpdateInfo) {
+        let popupView = UIView()
+        popupView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        popupView.layer.cornerRadius = 10
+        popupView.translatesAutoresizingMaskIntoConstraints = false
+        
+        let label = UILabel()
+        label.text = info.message
+        label.textColor = .white
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        popupView.addSubview(label)
+        view.addSubview(popupView)
+        
+        NSLayoutConstraint.activate([
+            popupView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            popupView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            popupView.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.9),
+            
+            label.topAnchor.constraint(equalTo: popupView.topAnchor, constant: 16),
+            label.bottomAnchor.constraint(equalTo: popupView.bottomAnchor, constant: -16),
+            label.leadingAnchor.constraint(equalTo: popupView.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: popupView.trailingAnchor, constant: -16)
+        ])
+        
+        // Animation hiển thị
+        popupView.alpha = 0
+        UIView.animate(withDuration: 0.3) {
+            popupView.alpha = 1
+        }
+        
+        // Tự động ẩn sau 2 giây
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            UIView.animate(withDuration: 0.3, animations: {
+                popupView.alpha = 0
+            }) { _ in
+                popupView.removeFromSuperview()
+            }
+        }
+    }
     
+    // MARK: - Helper Methods
     private func requestPhotoLibraryAccess(completion: @escaping (Bool) -> Void) {
         PHPhotoLibrary.requestAuthorization { status in
             DispatchQueue.main.async {
@@ -377,65 +290,43 @@ class ListViewController: UIViewController {
         }
     }
     
-    private func showPhotoLibraryAccessDeniedAlert() {
-        showAlert(title: "Access Denied", message: "Please allow access to your photo library in Settings.")
-    }
-    
-    private func showURLInputView() {
-        urlInputView = URLInputView(frame: view.bounds)
-        urlInputView?.delegate = self
-        view.addSubview(urlInputView!)
-    }
-    
-    // MARK: - Alert Handling
-    
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
-    
-    // MARK: - Button Actions
-    
-    @objc private func addButtonTapped() {
-        let actionSheet = UIAlertController(title: "Add New", message: nil, preferredStyle: .actionSheet)
-        let fromAlbumAction = UIAlertAction(title: "Add from Album", style: .default) { [weak self] _ in
-            self?.updateFromAlbumTapped()
-        }
-        let fromLinkAction = UIAlertAction(title: "Add from Link", style: .default) { [weak self] _ in
-            self?.updateFromLinkTapped()
+}
+
+// MARK: - URLInputDialogDelegate
+extension ListViewController: URLInputDialogDelegate {
+    func urlInputDialog(_ dialog: URLInputDialog, didEnterURL urlString: String) {
+        guard let url = URL(string: urlString) else {
+            showAlert(title: "Invalid URL", message: "Please enter a valid URL.")
+            return
         }
         
-        actionSheet.addAction(fromAlbumAction)
-        actionSheet.addAction(fromLinkAction)
-        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        present(actionSheet, animated: true)
+        loadingIndicator.startAnimating()
+        dataManager.downloadAndSaveMedia(from: url) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.loadingIndicator.stopAnimating()
+                switch result {
+                case .success(let message):
+                    self?.showAlert(title: "Success", message: message)
+                    self?.loadData()
+                case .failure(let error):
+                    self?.showAlert(title: "Error", message: error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    func urlInputDialogDidCancel(_ dialog: URLInputDialog) {
+        // Handle cancel if needed
     }
 }
 
-// MARK: - URLInputViewDelegate
-
-extension ListViewController: URLInputViewDelegate {
-    func urlInputViewDidCancel(_ inputView: URLInputView) {
-        UIView.animate(withDuration: 0.3, animations: {
-            inputView.alpha = 0
-        }) { _ in
-            inputView.removeFromSuperview()
-            self.urlInputView = nil
-        }
-    }
-    
-    func urlInputView(_ inputView: URLInputView, didEnterURL urlString: String) {
-        urlInputViewDidCancel(inputView)
-        downloadAndSaveMedia(from: urlString)
-    }
-}
-
-// MARK: - UICollectionViewDelegate & DataSource
-
-extension ListViewController: UICollectionViewDelegate, UICollectionViewDataSource {
-    
+// MARK: - UICollectionViewDataSource
+extension ListViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return dataSource.count
     }
@@ -443,26 +334,45 @@ extension ListViewController: UICollectionViewDelegate, UICollectionViewDataSour
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let item = dataSource[indexPath.item]
         
-        if item is AppVideo {
+        if let video = item as? AppVideo {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCell", for: indexPath) as! VideoCell
-            cell.configure(with: item as! AppVideo)
+            cell.configure(with: video)
             return cell
-        } else if item is AppImage {
+        } else if let image = item as? AppImage {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ImageCell", for: indexPath) as! ImageCell
-            cell.configure(with: item as! AppImage)
+            cell.configure(with: image)
             return cell
         }
         
         fatalError("Unknown cell type")
     }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+            let item = dataSource[indexPath.item]
+            
+            let detailVC: UIViewController
+            if let video = item as? AppVideo {
+                detailVC = VideoDetailViewController(video: video)
+            } else if let image = item as? AppImage {
+                detailVC = ImageDetailViewController(image: image)
+            } else {
+                return
+            }
+            
+            let navController = UINavigationController(rootViewController: detailVC)
+            navController.modalPresentationStyle = .fullScreen
+            present(navController, animated: true)
+        }
 }
 
 // MARK: - UICollectionViewDelegateFlowLayout
-
-extension ListViewController: UICollectionViewDelegateFlowLayout {
-    
+extension ListViewController: UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: (view.frame.width - 30) / 2, height: 200)
+        if selectedCategory == .image {
+            return CGSize(width: (view.frame.width - 30) / 2, height: 200)
+        } else {
+            let width = collectionView.bounds.width - 32
+            return CGSize(width: width, height: 72)
+        }
     }
 }
-

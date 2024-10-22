@@ -21,6 +21,7 @@ extension AppVideo {
     @NSManaged public var filepath: String?
     @NSManaged public var thumbnail: Data?
     @NSManaged public var duration: Double
+    @NSManaged public var createdAt: Date?
 
 }
 

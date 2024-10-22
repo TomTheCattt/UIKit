@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		081675932CBD359800DADBF2 /* SideMenuControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081675922CBD359800DADBF2 /* SideMenuControllerDelegate.swift */; };
 		081675952CBD3FA100DADBF2 /* ListViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081675942CBD3FA100DADBF2 /* ListViewControllerDelegate.swift */; };
-		081675972CBD444400DADBF2 /* URLInputViewDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081675962CBD444400DADBF2 /* URLInputViewDelegate.swift */; };
-		081675992CBD445D00DADBF2 /* URLInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081675982CBD445D00DADBF2 /* URLInputView.swift */; };
 		0845D72B2CBBC0A200ED308C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D72A2CBBC0A200ED308C /* AppDelegate.swift */; };
 		0845D72D2CBBC0A200ED308C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D72C2CBBC0A200ED308C /* SceneDelegate.swift */; };
 		0845D7352CBBC0A200ED308C /* Project.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7332CBBC0A200ED308C /* Project.xcdatamodeld */; };
@@ -30,13 +28,17 @@
 		086F58C42CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */; };
 		086F58C62CBD301000DFA7CA /* SideMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C52CBD301000DFA7CA /* SideMenuController.swift */; };
 		086F58C82CBD32C700DFA7CA /* ContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C72CBD32C700DFA7CA /* ContainerViewController.swift */; };
+		08DDB1152CC78DD8000B279D /* URLInputDialogDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */; };
+		08DDB1172CC78DFC000B279D /* URLInputDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1162CC78DFC000B279D /* URLInputDialog.swift */; };
+		08DDB1192CC80869000B279D /* DataUpdateResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1182CC80869000B279D /* DataUpdateResult.swift */; };
+		08DDB11B2CC80895000B279D /* ListViewDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11A2CC80895000B279D /* ListViewDataManager.swift */; };
+		08DDB11D2CC811AF000B279D /* ImageDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11C2CC811AF000B279D /* ImageDetailViewController.swift */; };
+		08DDB11F2CC811BC000B279D /* VideoDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11E2CC811BC000B279D /* VideoDetailViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		081675922CBD359800DADBF2 /* SideMenuControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideMenuControllerDelegate.swift; sourceTree = "<group>"; };
 		081675942CBD3FA100DADBF2 /* ListViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewControllerDelegate.swift; sourceTree = "<group>"; };
-		081675962CBD444400DADBF2 /* URLInputViewDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputViewDelegate.swift; sourceTree = "<group>"; };
-		081675982CBD445D00DADBF2 /* URLInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputView.swift; sourceTree = "<group>"; };
 		0845D7272CBBC0A200ED308C /* Project.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Project.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0845D72A2CBBC0A200ED308C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		0845D72C2CBBC0A200ED308C /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -58,6 +60,12 @@
 		086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewControllerDelegate.swift; sourceTree = "<group>"; };
 		086F58C52CBD301000DFA7CA /* SideMenuController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideMenuController.swift; sourceTree = "<group>"; };
 		086F58C72CBD32C700DFA7CA /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
+		08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputDialogDelegate.swift; sourceTree = "<group>"; };
+		08DDB1162CC78DFC000B279D /* URLInputDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputDialog.swift; sourceTree = "<group>"; };
+		08DDB1182CC80869000B279D /* DataUpdateResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataUpdateResult.swift; sourceTree = "<group>"; };
+		08DDB11A2CC80895000B279D /* ListViewDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewDataManager.swift; sourceTree = "<group>"; };
+		08DDB11C2CC811AF000B279D /* ImageDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDetailViewController.swift; sourceTree = "<group>"; };
+		08DDB11E2CC811BC000B279D /* VideoDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDetailViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +134,8 @@
 				0845D7582CBBC80900ED308C /* HomeViewController.swift */,
 				0845D7622CBCC38600ED308C /* ListViewController.swift */,
 				086F58C72CBD32C700DFA7CA /* ContainerViewController.swift */,
+				08DDB11C2CC811AF000B279D /* ImageDetailViewController.swift */,
+				08DDB11E2CC811BC000B279D /* VideoDetailViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -133,6 +143,7 @@
 		0845D7522CBBC74300ED308C /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				08DDB11A2CC80895000B279D /* ListViewDataManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -141,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				0845D75C2CBBFD7A00ED308C /* Category.swift */,
+				08DDB1182CC80869000B279D /* DataUpdateResult.swift */,
 			);
 			path = Enums;
 			sourceTree = "<group>";
@@ -151,7 +163,7 @@
 				086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */,
 				081675922CBD359800DADBF2 /* SideMenuControllerDelegate.swift */,
 				081675942CBD3FA100DADBF2 /* ListViewControllerDelegate.swift */,
-				081675962CBD444400DADBF2 /* URLInputViewDelegate.swift */,
+				08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */,
 			);
 			path = Delegate;
 			sourceTree = "<group>";
@@ -162,7 +174,7 @@
 				0845D75A2CBBFD2F00ED308C /* CategoryCell.swift */,
 				0845D7662CBCD0F900ED308C /* ImageCell.swift */,
 				0845D7682CBCD10800ED308C /* VideoCell.swift */,
-				081675982CBD445D00DADBF2 /* URLInputView.swift */,
+				08DDB1162CC78DFC000B279D /* URLInputDialog.swift */,
 			);
 			path = CustomViews;
 			sourceTree = "<group>";
@@ -246,20 +258,24 @@
 			files = (
 				081675952CBD3FA100DADBF2 /* ListViewControllerDelegate.swift in Sources */,
 				0845D7432CBBC15400ED308C /* CoreDataManager.swift in Sources */,
-				081675992CBD445D00DADBF2 /* URLInputView.swift in Sources */,
-				081675972CBD444400DADBF2 /* URLInputViewDelegate.swift in Sources */,
 				086F58C62CBD301000DFA7CA /* SideMenuController.swift in Sources */,
+				08DDB11F2CC811BC000B279D /* VideoDetailViewController.swift in Sources */,
 				0845D7482CBBC42200ED308C /* AppImage+CoreDataClass.swift in Sources */,
 				0845D74B2CBBC42200ED308C /* AppVideo+CoreDataProperties.swift in Sources */,
 				0845D74A2CBBC42200ED308C /* AppVideo+CoreDataClass.swift in Sources */,
 				0845D7692CBCD10800ED308C /* VideoCell.swift in Sources */,
+				08DDB11D2CC811AF000B279D /* ImageDetailViewController.swift in Sources */,
 				0845D7672CBCD0F900ED308C /* ImageCell.swift in Sources */,
 				0845D7592CBBC80900ED308C /* HomeViewController.swift in Sources */,
+				08DDB1152CC78DD8000B279D /* URLInputDialogDelegate.swift in Sources */,
 				0845D72B2CBBC0A200ED308C /* AppDelegate.swift in Sources */,
 				0845D72D2CBBC0A200ED308C /* SceneDelegate.swift in Sources */,
+				08DDB11B2CC80895000B279D /* ListViewDataManager.swift in Sources */,
 				0845D7492CBBC42200ED308C /* AppImage+CoreDataProperties.swift in Sources */,
+				08DDB1192CC80869000B279D /* DataUpdateResult.swift in Sources */,
 				086F58C82CBD32C700DFA7CA /* ContainerViewController.swift in Sources */,
 				081675932CBD359800DADBF2 /* SideMenuControllerDelegate.swift in Sources */,
+				08DDB1172CC78DFC000B279D /* URLInputDialog.swift in Sources */,
 				0845D7352CBBC0A200ED308C /* Project.xcdatamodeld in Sources */,
 				086F58C42CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift in Sources */,
 				0845D75B2CBBFD2F00ED308C /* CategoryCell.swift in Sources */,

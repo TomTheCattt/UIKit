@@ -8,11 +8,37 @@
 import Foundation
 import UIKit
 
-
 class VideoCell: UICollectionViewCell {
-    private let thumbnailImageView = UIImageView()
-    private let titleLabel = UILabel()
-    private let durationLabel = UILabel()
+    private let thumbnailImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 8
+        return imageView
+    }()
+    
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .label
+        label.font = .systemFont(ofSize: 16)
+        return label
+    }()
+    
+    private let durationLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .gray
+        label.font = .systemFont(ofSize: 14)
+        return label
+    }()
+    
+    private let playButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.tintColor = .white
+        button.setImage(UIImage(systemName: "play.fill"), for: .normal)
+        button.backgroundColor = .systemIndigo // Purple play button like in the design
+        button.layer.cornerRadius = 15
+        return button
+    }()
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -24,56 +50,54 @@ class VideoCell: UICollectionViewCell {
     }
     
     private func setupViews() {
-        // Setup thumbnail image view
-        thumbnailImageView.contentMode = .scaleAspectFill
-        thumbnailImageView.clipsToBounds = true
+        backgroundColor = .clear // Let the collection view background show through
+        
+        // Add subviews
         contentView.addSubview(thumbnailImageView)
-        thumbnailImageView.frame = contentView.bounds
-        thumbnailImageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        
-        // Setup title label
-        titleLabel.textAlignment = .left
-        titleLabel.textColor = .white
-        titleLabel.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         contentView.addSubview(titleLabel)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Setup duration label
-        durationLabel.textAlignment = .right
-        durationLabel.textColor = .white
-        durationLabel.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         contentView.addSubview(durationLabel)
+        contentView.addSubview(playButton)
+        
+        // Configure auto layout
+        thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
         durationLabel.translatesAutoresizingMaskIntoConstraints = false
+        playButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            titleLabel.leftAnchor.constraint(equalTo: contentView.leftAnchor),
-            titleLabel.rightAnchor.constraint(equalTo: contentView.rightAnchor),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            titleLabel.heightAnchor.constraint(equalToConstant: 40),
+            // Thumbnail
+            thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            thumbnailImageView.widthAnchor.constraint(equalToConstant: 64),
+            thumbnailImageView.heightAnchor.constraint(equalToConstant: 64),
             
-            durationLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            durationLabel.rightAnchor.constraint(equalTo: contentView.rightAnchor, constant: -8),
-            durationLabel.widthAnchor.constraint(equalToConstant: 60),
-            durationLabel.heightAnchor.constraint(equalToConstant: 24)
+            // Title
+            titleLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
+            titleLabel.topAnchor.constraint(equalTo: thumbnailImageView.topAnchor, constant: 8),
+            titleLabel.trailingAnchor.constraint(equalTo: playButton.leadingAnchor, constant: -8),
+            
+            // Duration
+            durationLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
+            durationLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+            
+            // Play button
+            playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            playButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            playButton.widthAnchor.constraint(equalToConstant: 30),
+            playButton.heightAnchor.constraint(equalToConstant: 30)
         ])
     }
     
-    func configure(with appVideo: AppVideo) {
-        titleLabel.text = appVideo.title
-        
-        if let thumbnailData = appVideo.thumbnail,
-           let thumbnail = UIImage(data: thumbnailData) {
-            thumbnailImageView.image = thumbnail
-        } else {
-            thumbnailImageView.backgroundColor = .lightGray
+    func configure(with video: AppVideo) {
+        if let thumbnail = video.thumbnail {
+            thumbnailImageView.image = UIImage(data: thumbnail)
         }
+        titleLabel.text = video.title
         
-        durationLabel.text = formatDuration(appVideo.duration)
-    }
-    
-    private func formatDuration(_ duration: Double) -> String {
-        let minutes = Int(duration / 60)
-        let seconds = Int(duration.truncatingRemainder(dividingBy: 60))
-        return String(format: "%d:%02d", minutes, seconds)
+        // Format duration
+        let duration = Int(video.duration)
+        let minutes = duration / 60
+        let seconds = duration % 60
+        durationLabel.text = String(format: "%02d:%02d", minutes, seconds)
     }
 }
