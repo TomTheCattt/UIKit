@@ -8,6 +8,7 @@
 import Foundation
 
 import UIKit
+import CoreData
 
 // MARK: - HomeViewController
 
@@ -41,6 +42,10 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
         // Add a button to the navigation bar to show the side menu
         let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3"), style: .plain, target: self, action: #selector(showSideMenu))
         navigationItem.leftBarButtonItem = sideMenuButton
+        
+        // Thêm nút xóa tất cả dữ liệu Core Data
+            let deleteButton = UIBarButtonItem(title: "Xóa Tất Cả", style: .plain, target: self, action: #selector(didTapDeleteAllButton))
+            navigationItem.rightBarButtonItem = deleteButton
     }
     
     private func setupTableView() {
@@ -124,6 +129,85 @@ extension HomeViewController: ListViewControllerDelegate {
             }
         }
     }
+}
+
+// MARK: - Core Data Deletion
+extension HomeViewController {
+    
+    // Hàm được gọi khi bấm vào nút "Xóa Tất Cả"
+    @objc private func didTapDeleteAllButton() {
+        // Hiển thị thông báo xác nhận trước khi xóa
+        let alert = UIAlertController(title: "Xóa Tất Cả Dữ Liệu", message: "Bạn có chắc chắn muốn xóa tất cả dữ liệu không?", preferredStyle: .alert)
+        
+        let deleteAction = UIAlertAction(title: "Xóa", style: .destructive) { [weak self] _ in
+            self?.deleteAllData()
+        }
+        let cancelAction = UIAlertAction(title: "Hủy", style: .cancel, handler: nil)
+        
+        alert.addAction(deleteAction)
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true, completion: nil)
+    }
+    
+    // Hàm xóa tất cả dữ liệu từ Core Data
+    private func deleteAllData() {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
+        let context = appDelegate.persistentContainer.viewContext
+        
+        // Thực thể cần xóa
+        let entities = ["AppVideo", "AppImage"] // Thay thế bằng tên các thực thể Core Data của bạn
+        
+        for entity in entities {
+            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entity)
+            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            
+            do {
+                // Lấy tất cả các thực thể để xóa file
+                let results = try context.fetch(fetchRequest) as! [NSManagedObject]
+                for result in results {
+                    if let filepath = result.value(forKey: "filepath") as? String {
+                        // Xóa file từ thư mục Documents
+                        self.deleteFile(at: filepath)
+                    }
+                }
+                
+                // Thực hiện xóa dữ liệu trong Core Data
+                try context.execute(deleteRequest)
+                try context.save()
+                print("Đã xóa tất cả dữ liệu từ \(entity)")
+            } catch let error as NSError {
+                print("Không thể xóa dữ liệu: \(error), \(error.userInfo)")
+            }
+        }
+        
+        // Xóa cache của Core Data
+        let persistentStoreCoordinator = appDelegate.persistentContainer.persistentStoreCoordinator
+        for store in persistentStoreCoordinator.persistentStores {
+            do {
+                try persistentStoreCoordinator.remove(store)
+                try persistentStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: store.url, options: nil)
+                print("Đã reset lại Persistent Store.")
+            } catch {
+                print("Không thể reset lại Persistent Store: \(error)")
+            }
+        }
+        
+        // Cập nhật giao diện người dùng sau khi xóa
+        tableView.reloadData()
+    }
+    
+    private func deleteFile(at path: String) {
+        let fileURL = URL(fileURLWithPath: path)
+        
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            print("Đã xóa file tại: \(path)")
+        } catch {
+            print("Không thể xóa file: \(error)")
+        }
+    }
+
 }
 
 

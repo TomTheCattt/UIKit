@@ -35,9 +35,16 @@ class VideoCell: UICollectionViewCell {
         let button = UIButton(type: .system)
         button.tintColor = .white
         button.setImage(UIImage(systemName: "play.fill"), for: .normal)
-        button.backgroundColor = .systemIndigo // Purple play button like in the design
+        button.backgroundColor = .systemIndigo
         button.layer.cornerRadius = 15
         return button
+    }()
+    
+    let dimView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.4)
+        view.isHidden = true
+        return view
     }()
     
     override init(frame: CGRect) {
@@ -50,19 +57,21 @@ class VideoCell: UICollectionViewCell {
     }
     
     private func setupViews() {
-        backgroundColor = .clear // Let the collection view background show through
+        backgroundColor = .clear
         
         // Add subviews
         contentView.addSubview(thumbnailImageView)
         contentView.addSubview(titleLabel)
         contentView.addSubview(durationLabel)
         contentView.addSubview(playButton)
+        contentView.addSubview(dimView)
         
         // Configure auto layout
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         durationLabel.translatesAutoresizingMaskIntoConstraints = false
         playButton.translatesAutoresizingMaskIntoConstraints = false
+        dimView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             // Thumbnail
@@ -84,7 +93,13 @@ class VideoCell: UICollectionViewCell {
             playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             playButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             playButton.widthAnchor.constraint(equalToConstant: 30),
-            playButton.heightAnchor.constraint(equalToConstant: 30)
+            playButton.heightAnchor.constraint(equalToConstant: 30),
+            
+            // Dim view
+            dimView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            dimView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            dimView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            dimView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
     }
     

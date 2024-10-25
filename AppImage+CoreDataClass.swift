@@ -2,7 +2,7 @@
 //  AppImage+CoreDataClass.swift
 //  Project
 //
-//  Created by Việt Anh Nguyễn on 13/10/2024.
+//  Created by Việt Anh Nguyễn on 24/10/2024.
 //
 //
 

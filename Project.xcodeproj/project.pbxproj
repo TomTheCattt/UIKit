@@ -15,10 +15,6 @@
 		0845D7372CBBC0A300ED308C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0845D7362CBBC0A300ED308C /* Assets.xcassets */; };
 		0845D73A2CBBC0A300ED308C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0845D7382CBBC0A300ED308C /* LaunchScreen.storyboard */; };
 		0845D7432CBBC15400ED308C /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7422CBBC15400ED308C /* CoreDataManager.swift */; };
-		0845D7482CBBC42200ED308C /* AppImage+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7442CBBC42200ED308C /* AppImage+CoreDataClass.swift */; };
-		0845D7492CBBC42200ED308C /* AppImage+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7452CBBC42200ED308C /* AppImage+CoreDataProperties.swift */; };
-		0845D74A2CBBC42200ED308C /* AppVideo+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7462CBBC42200ED308C /* AppVideo+CoreDataClass.swift */; };
-		0845D74B2CBBC42200ED308C /* AppVideo+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7472CBBC42200ED308C /* AppVideo+CoreDataProperties.swift */; };
 		0845D7592CBBC80900ED308C /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D7582CBBC80900ED308C /* HomeViewController.swift */; };
 		0845D75B2CBBFD2F00ED308C /* CategoryCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D75A2CBBFD2F00ED308C /* CategoryCell.swift */; };
 		0845D75D2CBBFD7A00ED308C /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0845D75C2CBBFD7A00ED308C /* Category.swift */; };
@@ -28,12 +24,15 @@
 		086F58C42CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */; };
 		086F58C62CBD301000DFA7CA /* SideMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C52CBD301000DFA7CA /* SideMenuController.swift */; };
 		086F58C82CBD32C700DFA7CA /* ContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086F58C72CBD32C700DFA7CA /* ContainerViewController.swift */; };
-		08DDB1152CC78DD8000B279D /* URLInputDialogDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */; };
-		08DDB1172CC78DFC000B279D /* URLInputDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1162CC78DFC000B279D /* URLInputDialog.swift */; };
 		08DDB1192CC80869000B279D /* DataUpdateResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1182CC80869000B279D /* DataUpdateResult.swift */; };
 		08DDB11B2CC80895000B279D /* ListViewDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11A2CC80895000B279D /* ListViewDataManager.swift */; };
 		08DDB11D2CC811AF000B279D /* ImageDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11C2CC811AF000B279D /* ImageDetailViewController.swift */; };
 		08DDB11F2CC811BC000B279D /* VideoDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB11E2CC811BC000B279D /* VideoDetailViewController.swift */; };
+		08DDB1242CC9D9EE000B279D /* AppVideo+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1202CC9D9EE000B279D /* AppVideo+CoreDataClass.swift */; };
+		08DDB1252CC9D9EE000B279D /* AppVideo+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1212CC9D9EE000B279D /* AppVideo+CoreDataProperties.swift */; };
+		08DDB1262CC9D9EE000B279D /* AppImage+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1222CC9D9EE000B279D /* AppImage+CoreDataClass.swift */; };
+		08DDB1272CC9D9EE000B279D /* AppImage+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DDB1232CC9D9EE000B279D /* AppImage+CoreDataProperties.swift */; };
+		08E060BC2CCB81B600F388B0 /* UICollectionViewCellExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E060BB2CCB81B600F388B0 /* UICollectionViewCellExtension.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,10 +46,6 @@
 		0845D7392CBBC0A300ED308C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		0845D73B2CBBC0A300ED308C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0845D7422CBBC15400ED308C /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
-		0845D7442CBBC42200ED308C /* AppImage+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppImage+CoreDataClass.swift"; sourceTree = "<group>"; };
-		0845D7452CBBC42200ED308C /* AppImage+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppImage+CoreDataProperties.swift"; sourceTree = "<group>"; };
-		0845D7462CBBC42200ED308C /* AppVideo+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppVideo+CoreDataClass.swift"; sourceTree = "<group>"; };
-		0845D7472CBBC42200ED308C /* AppVideo+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppVideo+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		0845D7582CBBC80900ED308C /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		0845D75A2CBBFD2F00ED308C /* CategoryCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CategoryCell.swift; sourceTree = "<group>"; };
 		0845D75C2CBBFD7A00ED308C /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
@@ -60,12 +55,15 @@
 		086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewControllerDelegate.swift; sourceTree = "<group>"; };
 		086F58C52CBD301000DFA7CA /* SideMenuController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideMenuController.swift; sourceTree = "<group>"; };
 		086F58C72CBD32C700DFA7CA /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
-		08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputDialogDelegate.swift; sourceTree = "<group>"; };
-		08DDB1162CC78DFC000B279D /* URLInputDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputDialog.swift; sourceTree = "<group>"; };
 		08DDB1182CC80869000B279D /* DataUpdateResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataUpdateResult.swift; sourceTree = "<group>"; };
 		08DDB11A2CC80895000B279D /* ListViewDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewDataManager.swift; sourceTree = "<group>"; };
 		08DDB11C2CC811AF000B279D /* ImageDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDetailViewController.swift; sourceTree = "<group>"; };
 		08DDB11E2CC811BC000B279D /* VideoDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDetailViewController.swift; sourceTree = "<group>"; };
+		08DDB1202CC9D9EE000B279D /* AppVideo+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppVideo+CoreDataClass.swift"; sourceTree = "<group>"; };
+		08DDB1212CC9D9EE000B279D /* AppVideo+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppVideo+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		08DDB1222CC9D9EE000B279D /* AppImage+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppImage+CoreDataClass.swift"; sourceTree = "<group>"; };
+		08DDB1232CC9D9EE000B279D /* AppImage+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppImage+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		08E060BB2CCB81B600F388B0 /* UICollectionViewCellExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UICollectionViewCellExtension.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,10 +80,10 @@
 		0845D71E2CBBC0A200ED308C = {
 			isa = PBXGroup;
 			children = (
-				0845D7442CBBC42200ED308C /* AppImage+CoreDataClass.swift */,
-				0845D7452CBBC42200ED308C /* AppImage+CoreDataProperties.swift */,
-				0845D7462CBBC42200ED308C /* AppVideo+CoreDataClass.swift */,
-				0845D7472CBBC42200ED308C /* AppVideo+CoreDataProperties.swift */,
+				08DDB1202CC9D9EE000B279D /* AppVideo+CoreDataClass.swift */,
+				08DDB1212CC9D9EE000B279D /* AppVideo+CoreDataProperties.swift */,
+				08DDB1222CC9D9EE000B279D /* AppImage+CoreDataClass.swift */,
+				08DDB1232CC9D9EE000B279D /* AppImage+CoreDataProperties.swift */,
 				0845D7292CBBC0A200ED308C /* Project */,
 				0845D7282CBBC0A200ED308C /* Products */,
 			);
@@ -102,11 +100,10 @@
 		0845D7292CBBC0A200ED308C /* Project */ = {
 			isa = PBXGroup;
 			children = (
-				0845D7562CBBC76900ED308C /* Helpers */,
 				0845D7552CBBC76200ED308C /* CustomViews */,
 				0845D7542CBBC75900ED308C /* Delegate */,
 				0845D7532CBBC75000ED308C /* Enums */,
-				0845D7522CBBC74300ED308C /* Models */,
+				0845D7522CBBC74300ED308C /* Extensions */,
 				0845D7512CBBC73700ED308C /* ViewControllers */,
 				0845D7412CBBC14A00ED308C /* CoreData */,
 				0845D72A2CBBC0A200ED308C /* AppDelegate.swift */,
@@ -122,6 +119,7 @@
 		0845D7412CBBC14A00ED308C /* CoreData */ = {
 			isa = PBXGroup;
 			children = (
+				08DDB11A2CC80895000B279D /* ListViewDataManager.swift */,
 				0845D7422CBBC15400ED308C /* CoreDataManager.swift */,
 			);
 			path = CoreData;
@@ -140,12 +138,12 @@
 			path = ViewControllers;
 			sourceTree = "<group>";
 		};
-		0845D7522CBBC74300ED308C /* Models */ = {
+		0845D7522CBBC74300ED308C /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
-				08DDB11A2CC80895000B279D /* ListViewDataManager.swift */,
+				08E060BB2CCB81B600F388B0 /* UICollectionViewCellExtension.swift */,
 			);
-			path = Models;
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		0845D7532CBBC75000ED308C /* Enums */ = {
@@ -163,7 +161,6 @@
 				086F58C32CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift */,
 				081675922CBD359800DADBF2 /* SideMenuControllerDelegate.swift */,
 				081675942CBD3FA100DADBF2 /* ListViewControllerDelegate.swift */,
-				08DDB1142CC78DD8000B279D /* URLInputDialogDelegate.swift */,
 			);
 			path = Delegate;
 			sourceTree = "<group>";
@@ -174,16 +171,8 @@
 				0845D75A2CBBFD2F00ED308C /* CategoryCell.swift */,
 				0845D7662CBCD0F900ED308C /* ImageCell.swift */,
 				0845D7682CBCD10800ED308C /* VideoCell.swift */,
-				08DDB1162CC78DFC000B279D /* URLInputDialog.swift */,
 			);
 			path = CustomViews;
-			sourceTree = "<group>";
-		};
-		0845D7562CBBC76900ED308C /* Helpers */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Helpers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -258,27 +247,26 @@
 			files = (
 				081675952CBD3FA100DADBF2 /* ListViewControllerDelegate.swift in Sources */,
 				0845D7432CBBC15400ED308C /* CoreDataManager.swift in Sources */,
+				08DDB1272CC9D9EE000B279D /* AppImage+CoreDataProperties.swift in Sources */,
 				086F58C62CBD301000DFA7CA /* SideMenuController.swift in Sources */,
 				08DDB11F2CC811BC000B279D /* VideoDetailViewController.swift in Sources */,
-				0845D7482CBBC42200ED308C /* AppImage+CoreDataClass.swift in Sources */,
-				0845D74B2CBBC42200ED308C /* AppVideo+CoreDataProperties.swift in Sources */,
-				0845D74A2CBBC42200ED308C /* AppVideo+CoreDataClass.swift in Sources */,
 				0845D7692CBCD10800ED308C /* VideoCell.swift in Sources */,
 				08DDB11D2CC811AF000B279D /* ImageDetailViewController.swift in Sources */,
 				0845D7672CBCD0F900ED308C /* ImageCell.swift in Sources */,
+				08DDB1262CC9D9EE000B279D /* AppImage+CoreDataClass.swift in Sources */,
 				0845D7592CBBC80900ED308C /* HomeViewController.swift in Sources */,
-				08DDB1152CC78DD8000B279D /* URLInputDialogDelegate.swift in Sources */,
 				0845D72B2CBBC0A200ED308C /* AppDelegate.swift in Sources */,
 				0845D72D2CBBC0A200ED308C /* SceneDelegate.swift in Sources */,
 				08DDB11B2CC80895000B279D /* ListViewDataManager.swift in Sources */,
-				0845D7492CBBC42200ED308C /* AppImage+CoreDataProperties.swift in Sources */,
 				08DDB1192CC80869000B279D /* DataUpdateResult.swift in Sources */,
 				086F58C82CBD32C700DFA7CA /* ContainerViewController.swift in Sources */,
 				081675932CBD359800DADBF2 /* SideMenuControllerDelegate.swift in Sources */,
-				08DDB1172CC78DFC000B279D /* URLInputDialog.swift in Sources */,
+				08DDB1242CC9D9EE000B279D /* AppVideo+CoreDataClass.swift in Sources */,
+				08E060BC2CCB81B600F388B0 /* UICollectionViewCellExtension.swift in Sources */,
 				0845D7352CBBC0A200ED308C /* Project.xcdatamodeld in Sources */,
 				086F58C42CBD2F5300DFA7CA /* HomeViewControllerDelegate.swift in Sources */,
 				0845D75B2CBBFD2F00ED308C /* CategoryCell.swift in Sources */,
+				08DDB1252CC9D9EE000B279D /* AppVideo+CoreDataProperties.swift in Sources */,
 				0845D7632CBCC38600ED308C /* ListViewController.swift in Sources */,
 				0845D75D2CBBFD7A00ED308C /* Category.swift in Sources */,
 			);

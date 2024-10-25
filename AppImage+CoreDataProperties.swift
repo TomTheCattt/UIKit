@@ -2,7 +2,7 @@
 //  AppImage+CoreDataProperties.swift
 //  Project
 //
-//  Created by Việt Anh Nguyễn on 22/10/2024.
+//  Created by Việt Anh Nguyễn on 24/10/2024.
 //
 //
 
@@ -16,11 +16,12 @@ extension AppImage {
         return NSFetchRequest<AppImage>(entityName: "AppImage")
     }
 
+    @NSManaged public var createdAt: Date?
     @NSManaged public var filepath: String?
     @NSManaged public var id: UUID?
     @NSManaged public var thumbnail: Data?
     @NSManaged public var title: String?
-    @NSManaged public var createdAt: Date?
+    @NSManaged public var localIdentifier: String?
 
 }
 

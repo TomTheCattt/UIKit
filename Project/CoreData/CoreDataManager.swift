@@ -17,21 +17,13 @@ class CoreDataManager {
     
     private init() {}
     
-    // MARK: - Persistent Container
+    // MARK: - Core Data Context
     
-    lazy var persistentContainer: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: "Project")
-        container.loadPersistentStores { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            }
-        }
-        return container
-    }()
-    
-    // Context for Core Data operations
     var context: NSManagedObjectContext {
-        return persistentContainer.viewContext
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            fatalError("AppDelegate not found")
+        }
+        return appDelegate.persistentContainer.viewContext
     }
     
     // MARK: - Save Context

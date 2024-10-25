@@ -10,6 +10,12 @@ import UIKit
 
 class ImageCell: UICollectionViewCell {
     private let thumbnailImageView = UIImageView()
+    let dimView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.4)
+        view.isHidden = true
+        return view
+    }()
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -26,6 +32,11 @@ class ImageCell: UICollectionViewCell {
         contentView.addSubview(thumbnailImageView)
         thumbnailImageView.frame = contentView.bounds
         thumbnailImageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Setup dim view
+        contentView.addSubview(dimView)
+        dimView.frame = contentView.bounds
+        dimView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
     
     func configure(with appImage: AppImage) {

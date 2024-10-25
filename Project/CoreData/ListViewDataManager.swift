@@ -134,7 +134,7 @@ final class ListViewDataManager {
     private func isAssetExists(_ identifier: String) -> Bool {
         let entityName = category == .video ? "AppVideo" : "AppImage"
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: entityName)
-        fetchRequest.predicate = NSPredicate(format: "title == %@", identifier)
+        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", identifier)
         
         do {
             let count = try context.count(for: fetchRequest)
@@ -165,7 +165,8 @@ final class ListViewDataManager {
         let options = PHImageRequestOptions()
         options.isSynchronous = true
         options.deliveryMode = .highQualityFormat
-        
+
+        // Bắt đầu yêu cầu hình ảnh từ tài sản
         manager.requestImage(for: asset,
                              targetSize: PHImageManagerMaximumSize,
                              contentMode: .aspectFit,
@@ -178,28 +179,59 @@ final class ListViewDataManager {
                 return
             }
             
+            // Tìm kiếm và xóa hình ảnh cũ nếu đã tồn tại
+            self.deleteExistingAsset(with: asset.localIdentifier)
+            
             let newImage = AppImage(context: self.context)
             newImage.id = UUID()
-            newImage.title = asset.localIdentifier
             newImage.createdAt = Date()
-            
+            newImage.localIdentifier = asset.localIdentifier
+
+            // Lưu ảnh vào thư mục Documents
             if let imagePath = self.saveImageToDocuments(image: image, withName: newImage.id?.uuidString ?? "unknown") {
                 newImage.filepath = imagePath
+                
+                // Lấy title từ filePath
+                let fileURL = URL(fileURLWithPath: imagePath)
+                newImage.title = fileURL.lastPathComponent
             }
-            
+
             if let thumbnailData = image.jpegData(compressionQuality: 0.5) {
                 newImage.thumbnail = thumbnailData
             }
-            
+
             do {
                 try self.context.save()
+                print("Saved Image:")
+                print("ID: \(newImage.id?.uuidString ?? "Unknown")")
+                print("Title: \(newImage.title ?? "Unknown")")
+                print("Filepath: \(newImage.filepath ?? "None")")
+                print("Created At: \(newImage.createdAt ?? Date())")
+                
                 completion(.success("Image saved successfully"))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-    
+
+    // Hàm xóa tài sản cũ dựa trên localIdentifier
+    private func deleteExistingAsset(with localIdentifier: String) {
+        let fetchRequest: NSFetchRequest<AppImage> = AppImage.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for asset in results {
+                context.delete(asset)
+            }
+            try context.save()  // Lưu lại các thay đổi
+        } catch {
+            print("Error deleting existing asset: \(error)")
+        }
+    }
+
+
     private func saveVideoToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
         let manager = PHImageManager.default()
         let options = PHVideoRequestOptions()
@@ -215,30 +247,63 @@ final class ListViewDataManager {
                 return
             }
             
+            // Xóa video cũ nếu đã tồn tại
+            self.deleteExistingVideo(with: asset.localIdentifier)
+
             let newVideo = AppVideo(context: self.context)
             newVideo.id = UUID()
-            newVideo.title = asset.localIdentifier
             newVideo.duration = asset.duration
             newVideo.createdAt = Date()
-            
+            newVideo.localIdentifier = asset.localIdentifier
+
+            // Lưu video vào thư mục Documents
             if let videoPath = self.saveVideoToDocuments(from: urlAsset.url,
                                                          withName: newVideo.id?.uuidString ?? "unknown") {
                 newVideo.filepath = videoPath
+                
+                // Lấy title từ filePath
+                let fileURL = URL(fileURLWithPath: videoPath)
+                newVideo.title = fileURL.lastPathComponent
             }
-            
+
+            // Tạo thumbnail cho video
             if let thumbnailImage = self.generateThumbnail(for: urlAsset) {
                 newVideo.thumbnail = thumbnailImage.jpegData(compressionQuality: 0.5)
             }
-            
+
             do {
                 try self.context.save()
+                print("Saved Video:")
+                print("ID: \(newVideo.id?.uuidString ?? "Unknown")")
+                print("Title: \(newVideo.title ?? "Unknown")")
+                print("Duration: \(newVideo.duration)")
+                print("Filepath: \(newVideo.filepath ?? "None")")
+                print("Created At: \(newVideo.createdAt ?? Date())")
+                
                 completion(.success("Video saved successfully"))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-    
+
+    // Hàm xóa tài sản cũ dựa trên localIdentifier
+    private func deleteExistingVideo(with localIdentifier: String) {
+        let fetchRequest: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for video in results {
+                context.delete(video)
+            }
+            try context.save()  // Lưu lại các thay đổi
+        } catch {
+            print("Error deleting existing video: \(error)")
+        }
+    }
+
+
     private func saveImageFromDownloadedData(_ data: Data, completion: @escaping (DataUpdateResult) -> Void) {
         guard let image = UIImage(data: data) else {
             completion(.failure(NSError(domain: "ImageError",
@@ -354,6 +419,24 @@ struct DataUpdateInfo {
             return "Đã cập nhật thành công \(newItemsCount) mục mới"
         } else {
             return "Đã cập nhật thành công và không có sự thay đổi mới"
+        }
+    }
+}
+
+extension ListViewDataManager {
+    func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
+        let context = self.context
+        
+        context.perform {
+            do {
+                for item in items {
+                    context.delete(item)
+                }
+                try context.save()
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
+            }
         }
     }
 }

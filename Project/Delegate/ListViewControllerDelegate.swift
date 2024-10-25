@@ -10,3 +10,4 @@ import Foundation
 protocol ListViewControllerDelegate: AnyObject {
     func listViewController(_ controller: ListViewController, didUpdateItemCount count: Int, forCategory category: CategoryType)
 }
+

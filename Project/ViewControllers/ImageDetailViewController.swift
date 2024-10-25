@@ -15,12 +15,14 @@ class ImageDetailViewController: UIViewController {
     private let imageView: UIImageView = {
         let view = UIImageView()
         view.contentMode = .scaleAspectFit
-        //view.backgroundColor = .black
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
     private var image: AppImage
+    private var initialTouchPoint: CGPoint = .zero
+    private let dismissThreshold: CGFloat = 100 // Ngưỡng để dismiss view
+    private var imageViewTopConstraint: NSLayoutConstraint?
     
     // MARK: - Initialization
     init(image: AppImage) {
@@ -41,18 +43,14 @@ class ImageDetailViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Ẩn title của navigation bar
         navigationItem.title = nil
-        // Làm cho navigation bar trong suốt
         navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
         navigationController?.navigationBar.shadowImage = UIImage()
-        // Đặt màu nút close thành trắng để dễ nhìn trên nền đen
         navigationController?.navigationBar.tintColor = .black
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        // Khôi phục lại navigation bar như cũ khi thoát view
         navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
         navigationController?.navigationBar.shadowImage = nil
     }
@@ -61,7 +59,6 @@ class ImageDetailViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .white
         
-        // Thêm nút close
         let closeButton = UIBarButtonItem(
             image: UIImage(systemName: "xmark"),
             style: .plain,
@@ -70,43 +67,45 @@ class ImageDetailViewController: UIViewController {
         )
         navigationItem.rightBarButtonItem = closeButton
         
-        // Setup image view
+        // Setup image view với top constraint có thể thay đổi
         view.addSubview(imageView)
+        imageViewTopConstraint = imageView.topAnchor.constraint(equalTo: view.topAnchor)
+        
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: view.topAnchor),
+            imageViewTopConstraint!,
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        // Setup pinch gesture for zoom
+        // Setup pinch gesture
         let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
-        imageView.isUserInteractionEnabled = true
         imageView.addGestureRecognizer(pinchGesture)
+        
+        // Setup pan gesture
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
+        imageView.addGestureRecognizer(panGesture)
+        
+        // Enable user interaction
+        imageView.isUserInteractionEnabled = true
     }
     
     private func loadImage() {
-        // Kiểm tra và đảm bảo filepath không rỗng
         guard let filepath = image.filepath, !filepath.isEmpty else {
             print("Invalid image file path")
             return
         }
 
-        // Chạy việc tải ảnh trên một luồng nền
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
-                // Kiểm tra nếu thumbnail có giá trị hợp lệ
                 guard let thumbnailData = self?.image.thumbnail else {
                     print("Thumbnail data is nil")
                     return
                 }
 
-                // Cố gắng đọc dữ liệu từ thumbnail
                 let imageData = Data(thumbnailData)
 
-                // Khởi tạo UIImage từ dữ liệu
                 if let image = UIImage(data: imageData) {
-                    // Cập nhật UI trên luồng chính
                     DispatchQueue.main.async {
                         self?.imageView.image = image
                     }
@@ -116,8 +115,6 @@ class ImageDetailViewController: UIViewController {
             }
         }
     }
-
-
     
     // MARK: - Actions
     @objc private func closeTapped() {
@@ -131,6 +128,51 @@ class ImageDetailViewController: UIViewController {
                 y: gesture.scale
             )
             gesture.scale = 1.0
+        }
+    }
+    
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let touchPoint = gesture.translation(in: view)
+        
+        switch gesture.state {
+        case .began:
+            initialTouchPoint = touchPoint
+            
+        case .changed:
+            // Chỉ cho phép kéo xuống
+            if touchPoint.y >= 0 {
+                // Update vị trí của imageView
+                imageViewTopConstraint?.constant = touchPoint.y
+                
+                // Thay đổi opacity của background dựa trên khoảng cách kéo
+                let progress = min(1.0, touchPoint.y / dismissThreshold)
+                view.backgroundColor = UIColor.white.withAlphaComponent(1 - progress * 0.6)
+            }
+            
+        case .ended:
+            let velocity = gesture.velocity(in: view)
+            
+            // Nếu kéo xuống quá ngưỡng hoặc velocity đủ lớn
+            if touchPoint.y > dismissThreshold || velocity.y > 1000 {
+                // Animate dismiss
+                UIView.animate(withDuration: 0.3, animations: { [weak self] in
+                    guard let self = self else { return }
+                    self.imageViewTopConstraint?.constant = self.view.frame.height
+                    self.view.backgroundColor = .clear
+                }) { [weak self] _ in
+                    self?.dismiss(animated: false)
+                }
+            } else {
+                // Animate quay về vị trí ban đầu
+                UIView.animate(withDuration: 0.3) { [weak self] in
+                    self?.imageViewTopConstraint?.constant = 0
+                    self?.view.backgroundColor = .white
+                    self?.view.layoutIfNeeded()
+                }
+            }
+            
+        default:
+            break
         }
     }
 }
