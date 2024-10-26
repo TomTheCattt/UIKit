@@ -46,7 +46,6 @@ class CoreDataManager {
         appImage.title = title
         appImage.filepath = filepath
         appImage.thumbnail = thumbnail
-        // id is automatically set as UUID when the object is created
         
         saveContext()
         return appImage
@@ -90,7 +89,6 @@ class CoreDataManager {
         appVideo.filepath = filepath
         appVideo.thumbnail = thumbnail
         appVideo.duration = duration
-        // id is automatically set as UUID when the object is created
         
         saveContext()
         return appVideo
@@ -189,7 +187,6 @@ extension CoreDataManager {
 
 extension UIImage {
     
-    // Converts UIImage to Data
     var toData: Data? {
         return pngData()
     }

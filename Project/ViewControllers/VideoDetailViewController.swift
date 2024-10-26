@@ -4,10 +4,10 @@
 //
 //  Created by Việt Anh Nguyễn on 23/10/2024.
 //
+//
 import UIKit
 import AVKit
-
-// MARK: - VideoDetailViewController.swift
+import Photos
 
 class VideoDetailViewController: UIViewController {
     private var player: AVPlayer?
@@ -40,73 +40,66 @@ class VideoDetailViewController: UIViewController {
     }
     
     private func setupPlayer() {
-        guard let filepath = video.filepath, !filepath.isEmpty else {
-            print("Error: Video filepath is empty or nil")
+        guard let localIdentifier = video.localIdentifier else {
+            print("Error: Video local identifier is nil")
             return
         }
         
-        if !FileManager.default.fileExists(atPath: filepath) {
-                print("Error: File does not exist at path: \(filepath)")
-                return
-            } else {
-                print("File exists at path: \(filepath)")
-            }
-        
-        let videoURL: URL
-        
-        // Check if it's a local or remote URL
-        if filepath.hasPrefix("http://") || filepath.hasPrefix("https://") {
-            // Remote URL
-            guard let url = URL(string: filepath) else {
-                print("Error: Invalid remote URL")
-                return
-            }
-            videoURL = url
-        } else {
-            // Local file path
-            videoURL = URL(fileURLWithPath: filepath)
-        }
-        
-        // Create asset and check if it's playable
-        let asset = AVAsset(url: videoURL)
-        let playerItem = AVPlayerItem(asset: asset)
-        
-        // Add observer for player item status
-        playerItem.addObserver(self,
-                             forKeyPath: #keyPath(AVPlayerItem.status),
-                             options: [.old, .new],
-                             context: nil)
-        
-        // Initialize player with the item
-        player = AVPlayer(playerItem: playerItem)
-        playerViewController = AVPlayerViewController()
-        playerViewController?.player = player
-        
-        guard let playerVC = playerViewController else {
-            print("Error: Failed to initialize AVPlayerViewController")
+        // Fetch PHAsset using local identifier
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        guard let asset = fetchResult.firstObject else {
+            print("Error: Could not find PHAsset with identifier: \(localIdentifier)")
             return
         }
         
-        // Add player view controller
-        addChild(playerVC)
-        view.addSubview(playerVC.view)
-        playerVC.view.translatesAutoresizingMaskIntoConstraints = false
+        // Request AVAsset from PHAsset
+        let options = PHVideoRequestOptions()
+        options.version = .current
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
         
-        NSLayoutConstraint.activate([
-            playerVC.view.topAnchor.constraint(equalTo: view.topAnchor),
-            playerVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            playerVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            playerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        
-        playerVC.didMove(toParent: self)
-        
-        // Enable background audio (if needed)
-        try? AVAudioSession.sharedInstance().setCategory(.playback)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { [weak self] (avAsset, _, info) in
+            DispatchQueue.main.async {
+                guard let self = self, let avAsset = avAsset else { return }
+                
+                // Create player item
+                let playerItem = AVPlayerItem(asset: avAsset)
+                playerItem.addObserver(self,
+                                    forKeyPath: #keyPath(AVPlayerItem.status),
+                                    options: [.old, .new],
+                                    context: nil)
+                
+                // Initialize player
+                self.player = AVPlayer(playerItem: playerItem)
+                self.playerViewController = AVPlayerViewController()
+                self.playerViewController?.player = self.player
+                
+                guard let playerVC = self.playerViewController else {
+                    print("Error: Failed to initialize AVPlayerViewController")
+                    return
+                }
+                
+                // Add player view controller
+                self.addChild(playerVC)
+                self.view.addSubview(playerVC.view)
+                playerVC.view.translatesAutoresizingMaskIntoConstraints = false
+                
+                NSLayoutConstraint.activate([
+                    playerVC.view.topAnchor.constraint(equalTo: self.view.topAnchor),
+                    playerVC.view.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+                    playerVC.view.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+                    playerVC.view.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+                ])
+                
+                playerVC.didMove(toParent: self)
+                
+                // Enable background audio
+                try? AVAudioSession.sharedInstance().setCategory(.playback)
+                try? AVAudioSession.sharedInstance().setActive(true)
+            }
+        }
     }
     
-    // Observer method for player item status
     override func observeValue(forKeyPath keyPath: String?,
                              of object: Any?,
                              change: [NSKeyValueChangeKey : Any]?,
@@ -119,7 +112,6 @@ class VideoDetailViewController: UIViewController {
                 status = .unknown
             }
             
-            // Check status
             switch status {
             case .readyToPlay:
                 print("Player is ready to play")
@@ -136,7 +128,6 @@ class VideoDetailViewController: UIViewController {
         }
     }
     
-    // Clean up observer when view controller is deallocated
     deinit {
         player?.currentItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
     }

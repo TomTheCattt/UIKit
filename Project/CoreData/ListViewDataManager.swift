@@ -109,27 +109,6 @@ final class ListViewDataManager {
         }
     }
     
-    func downloadAndSaveMedia(from url: URL, completion: @escaping (DataUpdateResult) -> Void) {
-        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self,
-                  let data = data else {
-                let error = error ?? NSError(domain: "DownloadError",
-                                             code: -1,
-                                             userInfo: [NSLocalizedDescriptionKey: "Download failed"])
-                completion(.failure(error))
-                return
-            }
-            
-            let isVideo = url.pathExtension.lowercased() == "mp4"
-            if isVideo {
-                self.saveVideoFromDownloadedData(data, completion: completion)
-            } else {
-                self.saveImageFromDownloadedData(data, completion: completion)
-            }
-        }
-        task.resume()
-    }
-    
     // MARK: - Private Methods
     private func isAssetExists(_ identifier: String) -> Bool {
         let entityName = category == .video ? "AppVideo" : "AppImage"
@@ -214,24 +193,7 @@ final class ListViewDataManager {
             }
         }
     }
-
-    // Hàm xóa tài sản cũ dựa trên localIdentifier
-    private func deleteExistingAsset(with localIdentifier: String) {
-        let fetchRequest: NSFetchRequest<AppImage> = AppImage.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            for asset in results {
-                context.delete(asset)
-            }
-            try context.save()  // Lưu lại các thay đổi
-        } catch {
-            print("Error deleting existing asset: \(error)")
-        }
-    }
-
-
+    
     private func saveVideoToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
         let manager = PHImageManager.default()
         let options = PHVideoRequestOptions()
@@ -287,7 +249,21 @@ final class ListViewDataManager {
         }
     }
 
-    // Hàm xóa tài sản cũ dựa trên localIdentifier
+    private func deleteExistingAsset(with localIdentifier: String) {
+        let fetchRequest: NSFetchRequest<AppImage> = AppImage.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for asset in results {
+                context.delete(asset)
+            }
+            try context.save()  // Lưu lại các thay đổi
+        } catch {
+            print("Error deleting existing asset: \(error)")
+        }
+    }
+
     private func deleteExistingVideo(with localIdentifier: String) {
         let fetchRequest: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
@@ -300,65 +276,6 @@ final class ListViewDataManager {
             try context.save()  // Lưu lại các thay đổi
         } catch {
             print("Error deleting existing video: \(error)")
-        }
-    }
-
-
-    private func saveImageFromDownloadedData(_ data: Data, completion: @escaping (DataUpdateResult) -> Void) {
-        guard let image = UIImage(data: data) else {
-            completion(.failure(NSError(domain: "ImageError",
-                                        code: -1,
-                                        userInfo: [NSLocalizedDescriptionKey: "Invalid image data"])))
-            return
-        }
-        
-        let newImage = AppImage(context: context)
-        newImage.id = UUID()
-        newImage.title = newImage.id?.uuidString ?? "downloaded_image"
-        newImage.createdAt = Date()
-        
-        if let imagePath = saveImageToDocuments(image: image, withName: newImage.id?.uuidString ?? "unknown") {
-            newImage.filepath = imagePath
-        }
-        
-        if let thumbnailData = image.jpegData(compressionQuality: 0.5) {
-            newImage.thumbnail = thumbnailData
-        }
-        
-        do {
-            try context.save()
-            completion(.success("Image downloaded and saved successfully"))
-        } catch {
-            completion(.failure(error))
-        }
-    }
-    
-    private func saveVideoFromDownloadedData(_ data: Data, completion: @escaping (DataUpdateResult) -> Void) {
-        let tempURL = getDocumentsDirectory().appendingPathComponent("temp_video.mp4")
-        do {
-            try data.write(to: tempURL)
-            let asset = AVAsset(url: tempURL)
-            
-            let newVideo = AppVideo(context: context)
-            newVideo.id = UUID()
-            newVideo.title = newVideo.id?.uuidString ?? "downloaded_video"
-            newVideo.duration = CMTimeGetSeconds(asset.duration)
-            newVideo.createdAt = Date()
-            
-            if let videoPath = saveVideoToDocuments(from: tempURL,
-                                                    withName: newVideo.id?.uuidString ?? "unknown") {
-                newVideo.filepath = videoPath
-            }
-            
-            if let thumbnailImage = generateThumbnail(for: asset) {
-                newVideo.thumbnail = thumbnailImage.jpegData(compressionQuality: 0.5)
-            }
-            
-            try context.save()
-            try FileManager.default.removeItem(at: tempURL)
-            completion(.success("Video downloaded and saved successfully"))
-        } catch {
-            completion(.failure(error))
         }
     }
     
