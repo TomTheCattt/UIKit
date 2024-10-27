@@ -7,17 +7,14 @@
 
 import UIKit
 
-/// Controller for the side menu UI
 class SideMenuController: UIViewController {
     
     // MARK: - Properties
-    
     weak var delegate: SideMenuControllerDelegate?
     
     private let settingOptions = ["Rate Us", "Share App", "Feedback", "Term Of Policy"]
     
     // MARK: - UI Elements
-    
     private lazy var settingsLabel: UILabel = {
         let label = UILabel()
         label.text = "Settings"
@@ -49,12 +46,17 @@ class SideMenuController: UIViewController {
     }()
     
     // MARK: - Lifecycle Methods
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
         setupConstraints()
     }
+
+}
+
+// MARK: - SideMenuController Setup
+
+extension SideMenuController {
     
     // MARK: - Setup Methods
     
@@ -100,7 +102,11 @@ class SideMenuController: UIViewController {
             previousButton = button
         }
     }
-    
+}
+
+// MARK: - SideMenuController Actions
+
+extension SideMenuController {
     // MARK: - Actions
     
     @objc private func backButtonTapped() {

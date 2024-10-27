@@ -9,6 +9,7 @@ import Foundation
 import UIKit
 
 class ImageCell: UICollectionViewCell {
+    // MARK: - UI Components
     private let thumbnailImageView = UIImageView()
     let dimView: UIView = {
         let view = UIView()
@@ -17,6 +18,7 @@ class ImageCell: UICollectionViewCell {
         return view
     }()
     
+    // MARK: - Initialization
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
@@ -25,7 +27,11 @@ class ImageCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+}
+
+// MARK: - Setup And Configure
+extension ImageCell {
+    // MARK: - Setup
     private func setupViews() {
         thumbnailImageView.contentMode = .scaleAspectFill
         thumbnailImageView.clipsToBounds = true
@@ -39,18 +45,20 @@ class ImageCell: UICollectionViewCell {
         dimView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
     
-    func configure(with appImage: AppImage) {
+    // MARK: - Configuration
+    func configure(with appImage: AppMedia) {
         if let thumbnailData = appImage.thumbnail,
            let thumbnail = UIImage(data: thumbnailData) {
             thumbnailImageView.image = thumbnail
         } else {
-            if let filepath = appImage.filepath,
-               let image = UIImage(contentsOfFile: filepath) {
+            if let localIdentifier = appImage.localIdentifier,
+               let image = UIImage(contentsOfFile: localIdentifier) {
                 thumbnailImageView.image = image
             } else {
                 thumbnailImageView.backgroundColor = .lightGray
             }
         }
     }
+    
 }
 

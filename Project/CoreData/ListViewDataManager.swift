@@ -14,105 +14,172 @@ import AVFoundation
 final class ListViewDataManager {
     // MARK: - Properties
     private let context: NSManagedObjectContext
-    private let category: CategoryType?
+    private let mediaType: String?
+    typealias BatchSaveCompletion = (totalProcessed: Int, totalSkipped: Int)
     
     // MARK: - Initialization
-    init(context: NSManagedObjectContext, category: CategoryType?) {
+    init(context: NSManagedObjectContext, mediaType: String?) {
         self.context = context
-        self.category = category
+        self.mediaType = mediaType
     }
-    
-    // MARK: - Public Methods
+}
+
+// MARK: - Data Fetching
+extension ListViewDataManager {
     func fetchData(completion: @escaping (Result<[NSManagedObject], Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let category = self.category else {
-                completion(.success([]))
-                return
-            }
+            guard let self = self else { return }
             
             do {
-                let fetchedData = try self.fetchAndSortData(for: category)
+                let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppMedia")
+                if let mediaType = self.mediaType {
+                    fetchRequest.predicate = NSPredicate(format: "mediaType == %@", mediaType)
+                }
+                
+                let sortDescriptor = NSSortDescriptor(key: "title", ascending: true)
+                fetchRequest.sortDescriptors = [sortDescriptor]
+                
+                let fetchedData = try self.context.fetch(fetchRequest)
                 completion(.success(fetchedData))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-    
+}
+
+// MARK: - Media Saving
+extension ListViewDataManager {
     func saveMediaFromAsset(_ asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
-        switch asset.mediaType {
-        case .image:
-            saveImageToCoreData(from: asset, completion: completion)
-        case .video:
-            saveVideoToCoreData(from: asset, completion: completion)
-        default:
-            let error = NSError(domain: "MediaTypeError",
-                                code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Unsupported media type"])
+        guard asset.localIdentifier.isEmpty == false else {
+            completion(.failure(NSError(domain: "AssetError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid asset identifier"])))
+            return
+        }
+        
+        if !isAssetExists(asset.localIdentifier) {
+            saveMediaToCoreData(from: asset, completion: completion)
+        } else {
+            completion(.failure(NSError(domain: "DuplicateError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Asset already exists"])))
+        }
+    }
+    
+    private func saveMediaToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
+        let media = AppMedia(context: context)
+        media.id = UUID()
+        media.createdAt = asset.creationDate
+        media.localIdentifier = asset.localIdentifier
+
+        let assetResources = PHAssetResource.assetResources(for: asset)
+        media.title = assetResources.first?.originalFilename ?? "Untitled"
+
+        media.mediaType = asset.mediaType == .image ? "image" : "video"
+        media.duration = asset.mediaType == .video ? asset.duration : 0
+
+        generateAndSaveThumbnail(for: asset, media: media, completion: completion)
+    }
+
+    private func generateAndSaveThumbnail(for asset: PHAsset, media: AppMedia, completion: @escaping (DataUpdateResult) -> Void) {
+        if asset.mediaType == .image {
+            let imageOptions = PHImageRequestOptions()
+            imageOptions.isSynchronous = true
+            imageOptions.deliveryMode = .highQualityFormat
+            
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: PHImageManagerMaximumSize,
+                contentMode: .aspectFit,
+                options: imageOptions
+            ) { [weak self] image, info in
+                guard let self = self,
+                      let image = image,
+                      let thumbnailData = image.jpegData(compressionQuality: 0.5) else {
+                    completion(.failure(NSError(domain: "ThumbnailError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create image thumbnail"])))
+                    return
+                }
+                
+                media.thumbnail = thumbnailData
+                self.saveContextAndComplete(completion: completion, successMessage: "Image saved successfully")
+            }
+        } else if asset.mediaType == .video {
+            let videoOptions = PHVideoRequestOptions()
+            videoOptions.isNetworkAccessAllowed = true
+            videoOptions.deliveryMode = .highQualityFormat
+            
+            PHImageManager.default().requestAVAsset(
+                forVideo: asset,
+                options: videoOptions
+            ) { [weak self] avAsset, _, _ in
+                guard let self = self,
+                      let urlAsset = avAsset as? AVURLAsset else {
+                    completion(.failure(NSError(domain: "VideoError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load video"])))
+                    return
+                }
+                
+                if let thumbnailImage = self.generateThumbnail(for: urlAsset),
+                   let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.5) {
+                    media.thumbnail = thumbnailData
+                    self.saveContextAndComplete(completion: completion, successMessage: "Video saved successfully")
+                } else {
+                    completion(.failure(NSError(domain: "ThumbnailError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create video thumbnail"])))
+                }
+            }
+        } else {
+            completion(.failure(NSError(domain: "MediaTypeError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unsupported media type"])))
+        }
+    }
+
+    private func saveContextAndComplete(completion: @escaping (DataUpdateResult) -> Void, successMessage: String) {
+        do {
+            try context.save()
+            completion(.success(successMessage))
+        } catch {
             completion(.failure(error))
         }
     }
     
-    func saveMediaFromAssets(_ assets: [PHAsset], completion: @escaping (Result<DataUpdateInfo, Error>) -> Void) {
-        var newItemsCount = 0
-        var duplicateItemsCount = 0
-        let group = DispatchGroup()
+    func saveMediaFromAssets(_ assets: [PHAsset], batchSize: Int = 20,
+                            progressHandler: @escaping (Int, Int) -> Void,
+                            completion: @escaping (Result<BatchSaveCompletion, Error>) -> Void) {
+        var processedCount = 0
+        var skippedCount = 0
+        let totalCount = assets.count
         
-        for asset in assets {
-            group.enter()
+        let group = DispatchGroup()
+        let queue = DispatchQueue(label: "com.app.batchProcessing", qos: .userInitiated)
+        
+        for i in stride(from: 0, to: assets.count, by: batchSize) {
+            let end = min(i + batchSize, assets.count)
+            let batch = Array(assets[i..<end])
             
-            // Kiểm tra xem asset đã tồn tại chưa
-            if !isAssetExists(asset.localIdentifier) {
+            batch.forEach { asset in
+                group.enter()
                 saveMediaFromAsset(asset) { result in
-                    switch result {
-                    case .success:
-                        newItemsCount += 1
-                    case .failure:
-                        // Xử lý lỗi nếu cần
-                        break
+                    queue.async {
+                        switch result {
+                        case .success:
+                            processedCount += 1
+                        case .failure(let error):
+                            if (error as NSError).domain == "DuplicateError" {
+                                skippedCount += 1
+                            }
+                        }
+                        progressHandler(processedCount, totalCount)
+                        group.leave()
                     }
-                    group.leave()
                 }
-            } else {
-                duplicateItemsCount += 1
-                group.leave()
             }
         }
         
         group.notify(queue: .main) {
-            let updateInfo = DataUpdateInfo(
-                newItemsCount: newItemsCount,
-                duplicateItemsCount: duplicateItemsCount
-            )
-            completion(.success(updateInfo))
+            completion(.success((processedCount, skippedCount)))
         }
     }
-    
-    func deleteMedia(_ object: NSManagedObject, completion: @escaping (DataUpdateResult) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            
-            // Delete associated file if exists
-            if let filepath = object.value(forKey: "filepath") as? String {
-                try? FileManager.default.removeItem(atPath: filepath)
-            }
-            
-            self.context.delete(object)
-            
-            do {
-                try self.context.save()
-                completion(.success("Media deleted successfully"))
-            } catch {
-                completion(.failure(error))
-            }
-        }
-    }
-    
-    // MARK: - Private Methods
+}
+
+// MARK: - Asset Management
+extension ListViewDataManager {
     private func isAssetExists(_ identifier: String) -> Bool {
-        let entityName = category == .video ? "AppVideo" : "AppImage"
-        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: entityName)
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppMedia")
         fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", identifier)
         
         do {
@@ -123,190 +190,28 @@ final class ListViewDataManager {
             return false
         }
     }
-    
-    private func fetchAndSortData(for category: CategoryType) throws -> [NSManagedObject] {
-        let fetchRequest: NSFetchRequest<NSManagedObject>
-        switch category {
-        case .video:
-            fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppVideo")
-        case .image:
-            fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppImage")
-        }
-        
-        let fetchedData = try context.fetch(fetchRequest)
-        return fetchedData.sorted {
-            ($0.value(forKey: "title") as? String ?? "") < ($1.value(forKey: "title") as? String ?? "")
-        }
-    }
-    
-    private func saveImageToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.isSynchronous = true
-        options.deliveryMode = .highQualityFormat
+}
 
-        // Bắt đầu yêu cầu hình ảnh từ tài sản
-        manager.requestImage(for: asset,
-                             targetSize: PHImageManagerMaximumSize,
-                             contentMode: .aspectFit,
-                             options: options) { [weak self] image, info in
-            guard let self = self,
-                  let image = image else {
-                completion(.failure(NSError(domain: "ImageError",
-                                            code: -1,
-                                            userInfo: [NSLocalizedDescriptionKey: "Failed to load image"])))
-                return
+// MARK: - Deletion
+extension ListViewDataManager {
+    func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
+        context.perform {
+            for item in items {
+                self.context.delete(item)
             }
             
-            // Tìm kiếm và xóa hình ảnh cũ nếu đã tồn tại
-            self.deleteExistingAsset(with: asset.localIdentifier)
-            
-            let newImage = AppImage(context: self.context)
-            newImage.id = UUID()
-            newImage.createdAt = Date()
-            newImage.localIdentifier = asset.localIdentifier
-
-            // Lưu ảnh vào thư mục Documents
-            if let imagePath = self.saveImageToDocuments(image: image, withName: newImage.id?.uuidString ?? "unknown") {
-                newImage.filepath = imagePath
-                
-                // Lấy title từ filePath
-                let fileURL = URL(fileURLWithPath: imagePath)
-                newImage.title = fileURL.lastPathComponent
-            }
-
-            if let thumbnailData = image.jpegData(compressionQuality: 0.5) {
-                newImage.thumbnail = thumbnailData
-            }
-
             do {
                 try self.context.save()
-                print("Saved Image:")
-                print("ID: \(newImage.id?.uuidString ?? "Unknown")")
-                print("Title: \(newImage.title ?? "Unknown")")
-                print("Filepath: \(newImage.filepath ?? "None")")
-                print("Created At: \(newImage.createdAt ?? Date())")
-                
-                completion(.success("Image saved successfully"))
+                completion(.success(()))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-    
-    private func saveVideoToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
-        let manager = PHImageManager.default()
-        let options = PHVideoRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
-        
-        manager.requestAVAsset(forVideo: asset, options: options) { [weak self] (avAsset, _, _) in
-            guard let self = self,
-                  let urlAsset = avAsset as? AVURLAsset else {
-                completion(.failure(NSError(domain: "VideoError",
-                                            code: -1,
-                                            userInfo: [NSLocalizedDescriptionKey: "Failed to load video"])))
-                return
-            }
-            
-            // Xóa video cũ nếu đã tồn tại
-            self.deleteExistingVideo(with: asset.localIdentifier)
+}
 
-            let newVideo = AppVideo(context: self.context)
-            newVideo.id = UUID()
-            newVideo.duration = asset.duration
-            newVideo.createdAt = Date()
-            newVideo.localIdentifier = asset.localIdentifier
-
-            // Lưu video vào thư mục Documents
-            if let videoPath = self.saveVideoToDocuments(from: urlAsset.url,
-                                                         withName: newVideo.id?.uuidString ?? "unknown") {
-                newVideo.filepath = videoPath
-                
-                // Lấy title từ filePath
-                let fileURL = URL(fileURLWithPath: videoPath)
-                newVideo.title = fileURL.lastPathComponent
-            }
-
-            // Tạo thumbnail cho video
-            if let thumbnailImage = self.generateThumbnail(for: urlAsset) {
-                newVideo.thumbnail = thumbnailImage.jpegData(compressionQuality: 0.5)
-            }
-
-            do {
-                try self.context.save()
-                print("Saved Video:")
-                print("ID: \(newVideo.id?.uuidString ?? "Unknown")")
-                print("Title: \(newVideo.title ?? "Unknown")")
-                print("Duration: \(newVideo.duration)")
-                print("Filepath: \(newVideo.filepath ?? "None")")
-                print("Created At: \(newVideo.createdAt ?? Date())")
-                
-                completion(.success("Video saved successfully"))
-            } catch {
-                completion(.failure(error))
-            }
-        }
-    }
-
-    private func deleteExistingAsset(with localIdentifier: String) {
-        let fetchRequest: NSFetchRequest<AppImage> = AppImage.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            for asset in results {
-                context.delete(asset)
-            }
-            try context.save()  // Lưu lại các thay đổi
-        } catch {
-            print("Error deleting existing asset: \(error)")
-        }
-    }
-
-    private func deleteExistingVideo(with localIdentifier: String) {
-        let fetchRequest: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", localIdentifier)
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            for video in results {
-                context.delete(video)
-            }
-            try context.save()  // Lưu lại các thay đổi
-        } catch {
-            print("Error deleting existing video: \(error)")
-        }
-    }
-    
-    // MARK: - Helper Methods
-    private func saveImageToDocuments(image: UIImage, withName name: String) -> String? {
-        guard let data = image.jpegData(compressionQuality: 1.0) else { return nil }
-        let filename = name + ".jpg"
-        let filepath = getDocumentsDirectory().appendingPathComponent(filename)
-        
-        do {
-            try data.write(to: filepath)
-            return filepath.path
-        } catch {
-            print("Error saving image to documents: \(error)")
-            return nil
-        }
-    }
-    
-    private func saveVideoToDocuments(from sourceURL: URL, withName name: String) -> String? {
-        let filename = name + ".mp4"
-        let destinationURL = getDocumentsDirectory().appendingPathComponent(filename)
-        
-        do {
-            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-            return destinationURL.path
-        } catch {
-            print("Error saving video to documents: \(error)")
-            return nil
-        }
-    }
-    
+// MARK: - Utilities
+extension ListViewDataManager {
     private func generateThumbnail(for video: AVAsset) -> UIImage? {
         let assetImgGenerate = AVAssetImageGenerator(asset: video)
         assetImgGenerate.appliesPreferredTrackTransform = true
@@ -318,42 +223,6 @@ final class ListViewDataManager {
         } catch {
             print("Error generating thumbnail: \(error)")
             return nil
-        }
-    }
-    
-    private func getDocumentsDirectory() -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    }
-}
-
-// MARK: - DataUpdateInfo
-struct DataUpdateInfo {
-    let newItemsCount: Int
-    let duplicateItemsCount: Int
-    
-    var message: String {
-        if newItemsCount > 0 {
-            return "Đã cập nhật thành công \(newItemsCount) mục mới"
-        } else {
-            return "Đã cập nhật thành công và không có sự thay đổi mới"
-        }
-    }
-}
-
-extension ListViewDataManager {
-    func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
-        let context = self.context
-        
-        context.perform {
-            do {
-                for item in items {
-                    context.delete(item)
-                }
-                try context.save()
-                completion(.success(()))
-            } catch {
-                completion(.failure(error))
-            }
         }
     }
 }

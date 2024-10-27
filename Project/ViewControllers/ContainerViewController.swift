@@ -41,6 +41,24 @@ class ContainerViewController: UIViewController {
         setupChildViewControllers()
         setupGestures()
     }
+}
+
+// MARK: - HomeViewControllerDelegate
+extension ContainerViewController: HomeViewControllerDelegate {
+    func didTapMenuButton() {
+        toggleMenu(shouldOpen: menuState == .closed)
+    }
+}
+
+// MARK: - SideMenuControllerDelegate
+extension ContainerViewController: SideMenuControllerDelegate {
+    func closeButtonTapped() {
+        toggleMenu(shouldOpen: false)
+    }
+}
+
+// MARK: - Setup
+extension ContainerViewController {
     
     // MARK: - Setup Methods
     
@@ -80,6 +98,11 @@ class ContainerViewController: UIViewController {
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(didPanGesture(_:)))
         view.addGestureRecognizer(panGesture)
     }
+    
+}
+
+// MARK: - Menu Handling Methods
+extension ContainerViewController {
     
     // MARK: - Menu Handling Methods
     
@@ -134,6 +157,11 @@ class ContainerViewController: UIViewController {
         return topViewController is HomeViewController
     }
     
+}
+
+// MARK: - Action Methods
+extension ContainerViewController {
+    
     // MARK: - Action Methods
     
     @objc private func didTapBlurView() {
@@ -152,20 +180,5 @@ class ContainerViewController: UIViewController {
             break
         }
     }
-}
-
-// MARK: - HomeViewControllerDelegate
-
-extension ContainerViewController: HomeViewControllerDelegate {
-    func didTapMenuButton() {
-        toggleMenu(shouldOpen: menuState == .closed)
-    }
-}
-
-// MARK: - SideMenuControllerDelegate
-
-extension ContainerViewController: SideMenuControllerDelegate {
-    func closeButtonTapped() {
-        toggleMenu(shouldOpen: false)
-    }
+    
 }

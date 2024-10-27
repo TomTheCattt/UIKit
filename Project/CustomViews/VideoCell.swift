@@ -9,6 +9,7 @@ import Foundation
 import UIKit
 
 class VideoCell: UICollectionViewCell {
+    // MARK: - UI Components
     private let thumbnailImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
@@ -47,6 +48,7 @@ class VideoCell: UICollectionViewCell {
         return view
     }()
     
+    //MARK: - Initialization
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
@@ -55,18 +57,21 @@ class VideoCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+}
+
+// MARK: - Setup And Configure
+extension VideoCell {
     
+    // MARK: - Setup
     private func setupViews() {
         backgroundColor = .clear
         
-        // Add subviews
         contentView.addSubview(thumbnailImageView)
         contentView.addSubview(titleLabel)
         contentView.addSubview(durationLabel)
         contentView.addSubview(playButton)
         contentView.addSubview(dimView)
         
-        // Configure auto layout
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         durationLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -74,28 +79,23 @@ class VideoCell: UICollectionViewCell {
         dimView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            // Thumbnail
             thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             thumbnailImageView.widthAnchor.constraint(equalToConstant: 64),
             thumbnailImageView.heightAnchor.constraint(equalToConstant: 64),
             
-            // Title
             titleLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
             titleLabel.topAnchor.constraint(equalTo: thumbnailImageView.topAnchor, constant: 8),
             titleLabel.trailingAnchor.constraint(equalTo: playButton.leadingAnchor, constant: -8),
             
-            // Duration
             durationLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
             durationLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
             
-            // Play button
             playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             playButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             playButton.widthAnchor.constraint(equalToConstant: 30),
             playButton.heightAnchor.constraint(equalToConstant: 30),
             
-            // Dim view
             dimView.topAnchor.constraint(equalTo: contentView.topAnchor),
             dimView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             dimView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
@@ -103,16 +103,17 @@ class VideoCell: UICollectionViewCell {
         ])
     }
     
-    func configure(with video: AppVideo) {
+    // MARK: - Configuration
+    func configure(with video: AppMedia) {
         if let thumbnail = video.thumbnail {
             thumbnailImageView.image = UIImage(data: thumbnail)
         }
         titleLabel.text = video.title
         
-        // Format duration
         let duration = Int(video.duration)
         let minutes = duration / 60
         let seconds = duration % 60
         durationLabel.text = String(format: "%02d:%02d", minutes, seconds)
     }
+    
 }

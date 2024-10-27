@@ -7,18 +7,15 @@
 
 import CoreData
 import UIKit
-
-// MARK: - CoreDataManager
+import Photos
 
 class CoreDataManager {
     
-    // Singleton instance
     static let shared = CoreDataManager()
     
     private init() {}
     
     // MARK: - Core Data Context
-    
     var context: NSManagedObjectContext {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             fatalError("AppDelegate not found")
@@ -27,7 +24,6 @@ class CoreDataManager {
     }
     
     // MARK: - Save Context
-    
     func saveContext() {
         if context.hasChanges {
             do {
@@ -39,156 +35,96 @@ class CoreDataManager {
         }
     }
     
-    // MARK: - AppImage CRUD Operations
-    
-    func createAppImage(title: String, filepath: String, thumbnail: Data) -> AppImage {
-        let appImage = AppImage(context: context)
-        appImage.title = title
-        appImage.filepath = filepath
-        appImage.thumbnail = thumbnail
+    // MARK: - AppMedia CRUD Operations
+    func createAppMedia(from asset: PHAsset) -> AppMedia {
+        let appMedia = AppMedia(context: context)
+        appMedia.id = UUID()
+        appMedia.localIdentifier = asset.localIdentifier
+        appMedia.createdAt = asset.creationDate
         
-        saveContext()
-        return appImage
-    }
-    
-    func fetchAllAppImages() -> [AppImage] {
-        let request: NSFetchRequest<AppImage> = AppImage.fetchRequest()
+        let assetResources = PHAssetResource.assetResources(for: asset)
+        appMedia.title = assetResources.first?.originalFilename
         
-        do {
-            return try context.fetch(request)
-        } catch {
-            print("Error fetching AppImages: \(error)")
-            return []
-        }
-    }
-    
-    func updateAppImage(appImage: AppImage, title: String? = nil, filepath: String? = nil, thumbnail: Data? = nil) {
-        if let title = title {
-            appImage.title = title
-        }
-        if let filepath = filepath {
-            appImage.filepath = filepath
-        }
-        if let thumbnail = thumbnail {
-            appImage.thumbnail = thumbnail
+        switch asset.mediaType {
+        case .image:
+            appMedia.mediaType = "image"
+            appMedia.duration = 0
+        case .video:
+            appMedia.mediaType = "video"
+            appMedia.duration = asset.duration
+        default:
+            appMedia.mediaType = "unknown"
+            appMedia.duration = 0
         }
         
         saveContext()
+        return appMedia
     }
     
-    func deleteAppImage(appImage: AppImage) {
-        context.delete(appImage)
-        saveContext()
-    }
-    
-    // MARK: - AppVideo CRUD Operations
-    
-    func createAppVideo(title: String, filepath: String, thumbnail: Data, duration: Double) -> AppVideo {
-        let appVideo = AppVideo(context: context)
-        appVideo.title = title
-        appVideo.filepath = filepath
-        appVideo.thumbnail = thumbnail
-        appVideo.duration = duration
-        
-        saveContext()
-        return appVideo
-    }
-    
-    func fetchAllAppVideos() -> [AppVideo] {
-        let request: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
+    func fetchAllMedia() -> [AppMedia] {
+        let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         
         do {
             return try context.fetch(request)
         } catch {
-            print("Error fetching AppVideos: \(error)")
+            print("Error fetching AppMedia: \(error)")
             return []
         }
     }
     
-    func updateAppVideo(appVideo: AppVideo, title: String? = nil, filepath: String? = nil, thumbnail: Data? = nil, duration: Double? = nil) {
-        if let title = title {
-            appVideo.title = title
-        }
-        if let filepath = filepath {
-            appVideo.filepath = filepath
-        }
-        if let thumbnail = thumbnail {
-            appVideo.thumbnail = thumbnail
-        }
-        if let duration = duration {
-            appVideo.duration = duration
-        }
+    func fetchMedia(byType mediaType: String) -> [AppMedia] {
+        let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
+        request.predicate = NSPredicate(format: "mediaType == %@", mediaType)
         
-        saveContext()
+        do {
+            return try context.fetch(request)
+        } catch {
+            print("Error fetching AppMedia by type: \(error)")
+            return []
+        }
     }
     
-    func deleteAppVideo(appVideo: AppVideo) {
-        context.delete(appVideo)
-        saveContext()
-    }
-    
-    // MARK: - Fetch by ID
-    
-    func fetchAppImage(byId id: UUID) -> AppImage? {
-        let request: NSFetchRequest<AppImage> = AppImage.fetchRequest()
+    func fetchMedia(byId id: UUID) -> AppMedia? {
+        let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         
         do {
             let results = try context.fetch(request)
             return results.first
         } catch {
-            print("Error fetching AppImage by ID: \(error)")
+            print("Error fetching AppMedia by ID: \(error)")
             return nil
         }
     }
     
-    func fetchAppVideo(byId id: UUID) -> AppVideo? {
-        let request: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+    func updateAppMedia(appMedia: AppMedia, title: String? = nil, thumbnail: Data? = nil) {
+        if let title = title {
+            appMedia.title = title
+        }
+        if let thumbnail = thumbnail {
+            appMedia.thumbnail = thumbnail
+        }
+        
+        saveContext()
+    }
+    
+    func deleteAppMedia(appMedia: AppMedia) {
+        context.delete(appMedia)
+        saveContext()
+    }
+    
+    // MARK: - Count Operations
+    func fetchMediaCount(ofType mediaType: String) -> Int {
+        let fetchRequest: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "mediaType == %@", mediaType)
         
         do {
-            let results = try context.fetch(request)
-            return results.first
-        } catch {
-            print("Error fetching AppVideo by ID: \(error)")
-            return nil
-        }
-    }
-}
-
-// MARK: - CoreDataManager Extension for Count Operations
-
-extension CoreDataManager {
-    
-    func fetchAppImagesCount() -> Int {
-        let fetchRequest: NSFetchRequest<AppImage> = AppImage.fetchRequest()
-        do {
             let count = try context.count(for: fetchRequest)
             return count
         } catch {
-            print("Failed to fetch AppImage count: \(error)")
+            print("Failed to fetch AppMedia count: \(error)")
             return 0
         }
-    }
-    
-    func fetchAppVideosCount() -> Int {
-        let fetchRequest: NSFetchRequest<AppVideo> = AppVideo.fetchRequest()
-        do {
-            let count = try context.count(for: fetchRequest)
-            return count
-        } catch {
-            print("Failed to fetch AppVideo count: \(error)")
-            return 0
-        }
-    }
-}
-
-// MARK: - UIImage Extension
-
-extension UIImage {
-    
-    var toData: Data? {
-        return pngData()
     }
 }
 

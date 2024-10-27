@@ -9,57 +9,90 @@ import Foundation
 
 import UIKit
 import CoreData
+import Photos
 
 // MARK: - HomeViewController
-
-class HomeViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
-    
+class HomeViewController: UIViewController {
     // MARK: - Properties
     weak var delegate: HomeViewControllerDelegate?
     
-    // Table view to display categories
-    private let tableView = UITableView()
-    
-    // Categories for the home view
     private let categories = [CategoryType.image, CategoryType.video]
     
-    // MARK: - Lifecycle
+    private lazy var dataManager: ListViewDataManager = {
+        DispatchQueue.main.sync {
+            return ListViewDataManager(context: CoreDataManager.shared.context, mediaType: nil)
+        }
+    }()
     
+    var loadingState: LoadingState = .idle {
+        didSet {
+            loadingStateDidChange?(loadingState)
+        }
+    }
+    
+    var loadingStateDidChange: ((LoadingState) -> Void)?
+    
+    // MARK: UI Element(s)
+    private let tableView = UITableView()
+    private let loadingView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        view.isHidden = true
+        return view
+    }()
+    
+    private let activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .large)
+        indicator.color = .white
+        return indicator
+    }()
+    
+    private lazy var progressView: UIProgressView = {
+        let progress = UIProgressView(progressViewStyle: .default)
+        progress.translatesAutoresizingMaskIntoConstraints = false
+        progress.isHidden = true
+        return progress
+    }()
+    
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Set up the view
         setupNavigationBar()
         setupTableView()
+        setupLoadingView()
+        setupProgressView()
+        bindViewModel()
     }
-    
-    // MARK: - UI Setup
+}
+
+// MARK: - UI Setup
+extension HomeViewController {
     
     private func setupNavigationBar() {
-        // Set the title of the Home View
         title = "Home"
         
-        // Add a button to the navigation bar to show the side menu
-        let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3"), style: .plain, target: self, action: #selector(showSideMenu))
+        let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3"),
+                                             style: .plain,
+                                             target: self,
+                                             action: #selector(showSideMenu))
         navigationItem.leftBarButtonItem = sideMenuButton
         
-        // Thêm nút xóa tất cả dữ liệu Core Data
-            let deleteButton = UIBarButtonItem(title: "Xóa Tất Cả", style: .plain, target: self, action: #selector(didTapDeleteAllButton))
-            navigationItem.rightBarButtonItem = deleteButton
+        let refreshButton = UIBarButtonItem(image: UIImage(systemName: "arrow.clockwise"),
+                                            style: .plain,
+                                            target: self,
+                                            action: #selector(refreshAllData))
+        navigationItem.rightBarButtonItem = refreshButton
     }
     
     private func setupTableView() {
-        // Add table view to the view hierarchy
         view.addSubview(tableView)
         
-        // Set the delegate and data source
         tableView.delegate = self
         tableView.dataSource = self
         
-        // Register a default UITableViewCell for reuse
-        tableView.register(CategoryCell.self, forCellReuseIdentifier: CategoryCell.reuseIdentifier)
+        tableView.register(MediaCell.self, forCellReuseIdentifier: MediaCell.reuseIdentifier)
         
-        // Set constraints for the table view
         tableView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -69,6 +102,117 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
         ])
     }
     
+    private func setupLoadingView() {
+        view.addSubview(loadingView)
+        loadingView.addSubview(activityIndicator)
+        
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            loadingView.topAnchor.constraint(equalTo: view.topAnchor),
+            loadingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            activityIndicator.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor)
+        ])
+    }
+    
+    private func setupProgressView() {
+        loadingView.addSubview(progressView)
+        
+        NSLayoutConstraint.activate([
+            progressView.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            progressView.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: 16),
+            progressView.widthAnchor.constraint(equalToConstant: 200)
+        ])
+    }
+    
+    private func showLoading(_ show: Bool) {
+        loadingView.isHidden = !show
+        if show {
+            activityIndicator.startAnimating()
+            view.isUserInteractionEnabled = false
+        } else {
+            activityIndicator.stopAnimating()
+            view.isUserInteractionEnabled = true
+        }
+    }
+    
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title,
+                                      message: message,
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func bindViewModel() {
+        loadingStateDidChange = { [weak self] state in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                switch state {
+                case .idle:
+                    self.showLoading(false)
+                    self.progressView.isHidden = true
+                    
+                case .loading(let progress):
+                    self.showLoading(true)
+                    self.progressView.isHidden = false
+                    self.progressView.progress = progress
+                    
+                case .completed(let updated, let skipped):
+                    self.showLoading(false)
+                    self.progressView.isHidden = true
+                    self.tableView.reloadData()
+                    self.showAlert(title: "Success",
+                                   message: "Updated \(updated) items.\nSkipped \(skipped) duplicates.")
+                    
+                case .error(let message):
+                    self.showLoading(false)
+                    self.progressView.isHidden = true
+                    self.showAlert(title: "Error", message: message)
+                }
+            }
+        }
+    }
+    
+    private func fetchAndSaveAllAssets() {
+        loadingState = .loading(progress: 0)
+        
+        let fetchOptions = PHFetchOptions()
+        let imageAssets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        let videoAssets = PHAsset.fetchAssets(with: .video, options: fetchOptions)
+        
+        var allAssets: [PHAsset] = []
+        imageAssets.enumerateObjects { (asset, _, _) in
+            allAssets.append(asset)
+        }
+        videoAssets.enumerateObjects { (asset, _, _) in
+            allAssets.append(asset)
+        }
+        
+        dataManager.saveMediaFromAssets(allAssets) { processed, total in
+            let progress = Float(processed) / Float(total)
+            self.loadingState = .loading(progress: progress)
+        } completion: { result in
+            switch result {
+            case .success(let completion):
+                self.loadingState = .completed(updated: completion.totalProcessed,
+                                               skipped: completion.totalSkipped)
+            case .failure(let error):
+                self.loadingState = .error(error.localizedDescription)
+            }
+        }
+    }
+    
+}
+
+// MARK: - Table Setup
+extension HomeViewController: UITableViewDataSource {
     // MARK: - UITableViewDataSource
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -76,138 +220,100 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: CategoryCell.reuseIdentifier, for: indexPath) as? CategoryCell else {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: MediaCell.reuseIdentifier, for: indexPath) as? MediaCell else {
             return UITableViewCell()
         }
         
-        // Configure the cell with the corresponding category
         cell.configure(with: categories[indexPath.row])
         return cell
     }
+}
+
+// MARK: - Table Interaction
+extension HomeViewController: UITableViewDelegate {
     
     // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        // Deselect the row with animation
         tableView.deselectRow(at: indexPath, animated: true)
         
-        // Get the selected category
         let selectedCategory = categories[indexPath.row]
         
-        // Customize the back button
         let backButton = UIBarButtonItem()
         backButton.title = ""
         navigationItem.backBarButtonItem = backButton
         
-        // Navigate to ListViewController with the selected category
         let listViewController = ListViewController()
         listViewController.selectedCategory = selectedCategory
-        listViewController.delegate = self 
+        listViewController.delegate = self
         navigationController?.pushViewController(listViewController, animated: true)
     }
     
-    // Customize row height
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 100
     }
+}
+
+// MARK: - Action
+extension HomeViewController {
     
     // MARK: - Side Menu Action
-    
     @objc private func showSideMenu() {
-        // Logic to show the side menu
         delegate?.didTapMenuButton()
     }
 }
-// MARK: - HomeViewController Extension
+
+// MARK: - Delegate
 extension HomeViewController: ListViewControllerDelegate {
     func listViewController(_ controller: ListViewController, didUpdateItemCount count: Int, forCategory category: CategoryType) {
-        // Since we're already on the main thread from ListViewController's callback,
-        // we can directly update the UI
         if let indexPath = categories.firstIndex(of: category).map({ IndexPath(row: $0, section: 0) }) {
-            if let cell = tableView.cellForRow(at: indexPath) as? CategoryCell {
+            if let cell = tableView.cellForRow(at: indexPath) as? MediaCell {
                 cell.configure(with: category)
             }
         }
     }
 }
 
-// MARK: - Core Data Deletion
+// MARK: - Data Methods
 extension HomeViewController {
-    
-    // Hàm được gọi khi bấm vào nút "Xóa Tất Cả"
-    @objc private func didTapDeleteAllButton() {
-        // Hiển thị thông báo xác nhận trước khi xóa
-        let alert = UIAlertController(title: "Xóa Tất Cả Dữ Liệu", message: "Bạn có chắc chắn muốn xóa tất cả dữ liệu không?", preferredStyle: .alert)
-        
-        let deleteAction = UIAlertAction(title: "Xóa", style: .destructive) { [weak self] _ in
-            self?.deleteAllData()
-        }
-        let cancelAction = UIAlertAction(title: "Hủy", style: .cancel, handler: nil)
-        
-        alert.addAction(deleteAction)
-        alert.addAction(cancelAction)
-        
-        present(alert, animated: true, completion: nil)
-    }
-    
-    // Hàm xóa tất cả dữ liệu từ Core Data
-    private func deleteAllData() {
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
-        let context = appDelegate.persistentContainer.viewContext
-        
-        // Thực thể cần xóa
-        let entities = ["AppVideo", "AppImage"] // Thay thế bằng tên các thực thể Core Data của bạn
-        
-        for entity in entities {
-            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entity)
-            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+    @objc private func refreshAllData() {
+        requestPhotoLibraryAccess { [weak self] granted in
+            guard let self = self else { return }
             
-            do {
-                // Lấy tất cả các thực thể để xóa file
-                let results = try context.fetch(fetchRequest) as! [NSManagedObject]
-                for result in results {
-                    if let filepath = result.value(forKey: "filepath") as? String {
-                        // Xóa file từ thư mục Documents
-                        self.deleteFile(at: filepath)
-                    }
+            if granted {
+                self.fetchAndSaveAllAssets()
+            } else {
+                DispatchQueue.main.async {
+                    self.showAlert(title: "Error",
+                                   message: "Permission to access photo library is required")
                 }
-                
-                // Thực hiện xóa dữ liệu trong Core Data
-                try context.execute(deleteRequest)
-                try context.save()
-                print("Đã xóa tất cả dữ liệu từ \(entity)")
-            } catch let error as NSError {
-                print("Không thể xóa dữ liệu: \(error), \(error.userInfo)")
             }
         }
-        
-        // Xóa cache của Core Data
-        let persistentStoreCoordinator = appDelegate.persistentContainer.persistentStoreCoordinator
-        for store in persistentStoreCoordinator.persistentStores {
-            do {
-                try persistentStoreCoordinator.remove(store)
-                try persistentStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: store.url, options: nil)
-                print("Đã reset lại Persistent Store.")
-            } catch {
-                print("Không thể reset lại Persistent Store: \(error)")
-            }
-        }
-        
-        // Cập nhật giao diện người dùng sau khi xóa
-        tableView.reloadData()
     }
     
-    private func deleteFile(at path: String) {
-        let fileURL = URL(fileURLWithPath: path)
-        
-        do {
-            try FileManager.default.removeItem(at: fileURL)
-            print("Đã xóa file tại: \(path)")
-        } catch {
-            print("Không thể xóa file: \(error)")
+    private func fetchCoreDataItems() {
+        dataManager.fetchData { result in
+            switch result {
+            case .success(let items):
+                print("Fetched items:")
+                items.forEach { item in
+                    print(item)  // Customize this print as needed for specific attributes
+                }
+            case .failure(let error):
+                print("Failed to fetch items: \(error.localizedDescription)")
+            }
         }
     }
-
 }
+
+// MARK: - Photos Library Permission
+extension HomeViewController {
+    private func requestPhotoLibraryAccess(completion: @escaping (Bool) -> Void) {
+        PHPhotoLibrary.requestAuthorization { status in
+            completion(status == .authorized)
+        }
+    }
+}
+
 
 

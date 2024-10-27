@@ -9,10 +9,17 @@ import Foundation
 import UIKit
 import Photos
 
-// MARK: - ImageDetailViewController.swift
-
+// MARK: - ImageDetailViewController
 class ImageDetailViewController: UIViewController {
     // MARK: - Properties
+    
+    private var image: AppMedia
+    private var initialTouchPoint: CGPoint = .zero
+    private let dismissThreshold: CGFloat = 100
+    private var imageViewTopConstraint: NSLayoutConstraint?
+    
+    // MARK: - UI Elements
+    
     private let imageView: UIImageView = {
         let view = UIImageView()
         view.contentMode = .scaleAspectFit
@@ -20,13 +27,8 @@ class ImageDetailViewController: UIViewController {
         return view
     }()
     
-    private var image: AppImage
-    private var initialTouchPoint: CGPoint = .zero
-    private let dismissThreshold: CGFloat = 100
-    private var imageViewTopConstraint: NSLayoutConstraint?
-    
     // MARK: - Initialization
-    init(image: AppImage) {
+    init(image: AppMedia) {
         self.image = image
         super.init(nibName: nil, bundle: nil)
     }
@@ -55,6 +57,11 @@ class ImageDetailViewController: UIViewController {
         navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
         navigationController?.navigationBar.shadowImage = nil
     }
+    
+}
+
+// MARK: - Setup
+extension ImageDetailViewController {
     
     // MARK: - Setup
     private func setupUI() {
@@ -116,8 +123,11 @@ class ImageDetailViewController: UIViewController {
             }
         }
     }
+}
+
+// MARK: - Actions
+extension ImageDetailViewController {
     
-    // MARK: - Actions
     @objc private func closeTapped() {
         dismiss(animated: true)
     }
@@ -166,7 +176,6 @@ class ImageDetailViewController: UIViewController {
                     self?.view.layoutIfNeeded()
                 }
             }
-            
         default:
             break
         }

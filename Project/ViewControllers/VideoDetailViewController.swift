@@ -10,11 +10,16 @@ import AVKit
 import Photos
 
 class VideoDetailViewController: UIViewController {
+    
+    // MARK: - Properties
+    
     private var player: AVPlayer?
     private var playerViewController: AVPlayerViewController?
-    private var video: AppVideo
+    private var video: AppMedia
     
-    init(video: AppVideo) {
+    // MARK: - Initialization
+    
+    init(video: AppMedia) {
         self.video = video
         super.init(nibName: nil, bundle: nil)
     }
@@ -22,6 +27,12 @@ class VideoDetailViewController: UIViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    deinit {
+        player?.currentItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
+    }
+    
+    //MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,6 +44,10 @@ class VideoDetailViewController: UIViewController {
         super.viewWillDisappear(animated)
         player?.pause()
     }
+}
+
+// MARK: - Setup
+extension VideoDetailViewController {
     
     private func setupUI() {
         view.backgroundColor = .black
@@ -45,14 +60,12 @@ class VideoDetailViewController: UIViewController {
             return
         }
         
-        // Fetch PHAsset using local identifier
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         guard let asset = fetchResult.firstObject else {
             print("Error: Could not find PHAsset with identifier: \(localIdentifier)")
             return
         }
         
-        // Request AVAsset from PHAsset
         let options = PHVideoRequestOptions()
         options.version = .current
         options.deliveryMode = .highQualityFormat
@@ -62,14 +75,12 @@ class VideoDetailViewController: UIViewController {
             DispatchQueue.main.async {
                 guard let self = self, let avAsset = avAsset else { return }
                 
-                // Create player item
                 let playerItem = AVPlayerItem(asset: avAsset)
                 playerItem.addObserver(self,
                                     forKeyPath: #keyPath(AVPlayerItem.status),
                                     options: [.old, .new],
                                     context: nil)
                 
-                // Initialize player
                 self.player = AVPlayer(playerItem: playerItem)
                 self.playerViewController = AVPlayerViewController()
                 self.playerViewController?.player = self.player
@@ -79,7 +90,6 @@ class VideoDetailViewController: UIViewController {
                     return
                 }
                 
-                // Add player view controller
                 self.addChild(playerVC)
                 self.view.addSubview(playerVC.view)
                 playerVC.view.translatesAutoresizingMaskIntoConstraints = false
@@ -93,42 +103,9 @@ class VideoDetailViewController: UIViewController {
                 
                 playerVC.didMove(toParent: self)
                 
-                // Enable background audio
                 try? AVAudioSession.sharedInstance().setCategory(.playback)
                 try? AVAudioSession.sharedInstance().setActive(true)
             }
         }
-    }
-    
-    override func observeValue(forKeyPath keyPath: String?,
-                             of object: Any?,
-                             change: [NSKeyValueChangeKey : Any]?,
-                             context: UnsafeMutableRawPointer?) {
-        if keyPath == #keyPath(AVPlayerItem.status) {
-            let status: AVPlayerItem.Status
-            if let statusNumber = change?[.newKey] as? NSNumber {
-                status = AVPlayerItem.Status(rawValue: statusNumber.intValue)!
-            } else {
-                status = .unknown
-            }
-            
-            switch status {
-            case .readyToPlay:
-                print("Player is ready to play")
-                player?.play()
-            case .failed:
-                if let error = player?.currentItem?.error {
-                    print("Player failed with error: \(error.localizedDescription)")
-                }
-            case .unknown:
-                print("Player status is unknown")
-            @unknown default:
-                break
-            }
-        }
-    }
-    
-    deinit {
-        player?.currentItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
     }
 }

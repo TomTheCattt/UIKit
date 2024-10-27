@@ -11,7 +11,6 @@ import UIKit
 
 extension UICollectionViewCell {
     func setSelectionMode(_ enabled: Bool, isSelected: Bool) {
-        // Add checkbox view if not exists
         if let existingCheckbox = contentView.viewWithTag(999) {
             existingCheckbox.isHidden = !enabled
             (existingCheckbox as? UIImageView)?.image = UIImage(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -33,7 +32,6 @@ extension UICollectionViewCell {
             ])
         }
         
-        // Handle dim view if cell is ImageCell or VideoCell
         if let imageCell = self as? ImageCell {
             imageCell.dimView.isHidden = !isSelected
         } else if let videoCell = self as? VideoCell {

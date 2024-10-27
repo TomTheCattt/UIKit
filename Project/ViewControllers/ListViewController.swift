@@ -7,9 +7,13 @@ class ListViewController: UIViewController {
     // MARK: - Properties
     weak var delegate: ListViewControllerDelegate?
     var selectedCategory: CategoryType?
-    
     private var dataManager: ListViewDataManager!
     private var dataSource: [NSManagedObject] = []
+    private var collectionView: UICollectionView!
+    private var noDataLabel: UILabel!
+    private var isSelectionModeEnabled = false
+    private var selectedItems: Set<IndexPath> = []
+    private var bottomBarBottomConstraint: NSLayoutConstraint?
     
     private lazy var loadingIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
@@ -18,24 +22,14 @@ class ListViewController: UIViewController {
         return indicator
     }()
     
-    private var collectionView: UICollectionView!
-    private var noDataLabel: UILabel!
-    private var updateFromAlbumButton: UIButton!
-    private var isSelectionModeEnabled = false
-    private var selectedItems: Set<IndexPath> = []
-    
     private lazy var selectAllButton: UIBarButtonItem = {
         UIBarButtonItem(title: "Select All", style: .plain, target: self, action: #selector(selectAllTapped))
     }()
     
     private lazy var cancelButton: UIBarButtonItem = {
         let button = UIBarButtonItem(title: "Cancel", style: .done, target: self, action: #selector(cancelSelectionTapped))
-        button.tintColor = .systemRed  // Set cancel button color to red
+        button.tintColor = .systemRed
         return button
-    }()
-    
-    private lazy var updateButton: UIBarButtonItem = {
-        UIBarButtonItem(image: UIImage(systemName: "arrow.triangle.2.circlepath"), style: .plain, target: self, action: #selector(updateFromAlbumTapped))
     }()
     
     private lazy var selectButton: UIBarButtonItem = {
@@ -60,8 +54,6 @@ class ListViewController: UIViewController {
         return button
     }()
     
-    private var bottomBarBottomConstraint: NSLayoutConstraint?
-    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -72,37 +64,18 @@ class ListViewController: UIViewController {
         setupBottomBar()
     }
     
-    private func setupNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleDataChange(_:)),
-            name: NSNotification.Name("DataDidChange"),
-            object: nil
-        )
-    }
-    
-    @objc private func handleDataChange(_ notification: Notification) {
-        if let updatedData = notification.userInfo?["updatedData"] as? [NSManagedObject] {
-            updateUI(with: updatedData)
-        }
-    }
-    
-    private func updateUI(with data: [NSManagedObject]) {
-        DispatchQueue.main.async {
-            self.collectionView.reloadData()
-        }
-    }
-    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
-    // MARK: - Setup
+}
+
+// MARK: - Setup Extension
+extension ListViewController {
     private func setupDataManager() {
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         dataManager = ListViewDataManager(
             context: appDelegate.persistentContainer.viewContext,
-            category: selectedCategory
+            mediaType: selectedCategory?.rawValue
         )
     }
     
@@ -112,7 +85,6 @@ class ListViewController: UIViewController {
         setupCollectionView()
         setupNavigationBar()
         setupNoDataLabel()
-        setupUpdateButtons()
         setupLoadingIndicator()
     }
     
@@ -146,14 +118,13 @@ class ListViewController: UIViewController {
     }
     
     private func setupNavigationBar() {
-        navigationItem.rightBarButtonItems = [selectButton, updateButton]
+        navigationItem.rightBarButtonItems = [selectButton]
     }
     
     private func setupBottomBar() {
         view.addSubview(bottomBar)
         bottomBar.addSubview(deleteButton)
         
-        // Initially position the bottom bar below the screen
         let bottomConstraint = bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 100)
         bottomBarBottomConstraint = bottomConstraint
         
@@ -185,25 +156,6 @@ class ListViewController: UIViewController {
         ])
     }
     
-    private func setupUpdateButtons() {
-        updateFromAlbumButton = UIButton(type: .system)
-        updateFromAlbumButton.setTitle("Update from Album", for: .normal)
-        updateFromAlbumButton.addTarget(self, action: #selector(updateFromAlbumTapped), for: .touchUpInside)
-        
-        let stackView = UIStackView(arrangedSubviews: [updateFromAlbumButton])
-        stackView.axis = .vertical
-        stackView.spacing = 10
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stackView.topAnchor.constraint(equalTo: noDataLabel.bottomAnchor, constant: 20),
-            stackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.8)
-        ])
-    }
-    
     private func setupLoadingIndicator() {
         view.addSubview(loadingIndicator)
         NSLayoutConstraint.activate([
@@ -212,7 +164,18 @@ class ListViewController: UIViewController {
         ])
     }
     
-    // MARK: - Data Loading
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDataChange(_:)),
+            name: NSNotification.Name("DataDidChange"),
+            object: nil
+        )
+    }
+}
+
+// MARK: - Data Management Extension
+extension ListViewController {
     private func loadData() {
         loadingIndicator.startAnimating()
         dataManager.fetchData { [weak self] result in
@@ -234,15 +197,9 @@ class ListViewController: UIViewController {
         }
     }
     
-    // MARK: - UI Updates
-    private func updateUI() {
-        let isEmpty = dataSource.isEmpty
-        collectionView.isHidden = isEmpty
-        noDataLabel.isHidden = !isEmpty
-        updateFromAlbumButton.isHidden = !isEmpty
-        
-        if !isEmpty {
-            collectionView.reloadData()
+    @objc private func handleDataChange(_ notification: Notification) {
+        if let updatedData = notification.userInfo?["updatedData"] as? [NSManagedObject] {
+            updateUI(with: updatedData)
         }
     }
     
@@ -253,52 +210,38 @@ class ListViewController: UIViewController {
             forCategory: selectedCategory ?? .image
         )
     }
-    
-    // MARK: - Actions
-    @objc private func updateFromAlbumTapped() {
-        requestPhotoLibraryAccess { [weak self] granted in
-            guard granted else {
-                self?.showAlert(title: "Access Denied", message: "Please allow access to your photo library in Settings.")
-                return
-            }
-            
-            DispatchQueue.main.async {
-                self?.fetchAssetsFromAlbum()
-            }
+}
+
+// MARK: - UI Update Extension
+extension ListViewController {
+    private func updateUI() {
+        let isEmpty = dataSource.isEmpty
+        collectionView.isHidden = isEmpty
+        noDataLabel.isHidden = !isEmpty
+        
+        if !isEmpty {
+            collectionView.reloadData()
         }
     }
     
-    @objc private func optionButtonTapped() {
-        let actionSheet = UIAlertController(title: "Options", message: nil, preferredStyle: .actionSheet)
-        
-        actionSheet.addAction(UIAlertAction(title: "Select item", style: .default) { [weak self] _ in
-            self?.updateFromAlbumTapped()
-        })
-        
-        actionSheet.addAction(UIAlertAction(title: "Add from Album", style: .default) { [weak self] _ in
-            self?.updateFromAlbumTapped()
-        })
-        
-        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        present(actionSheet, animated: true)
+    private func updateUI(with data: [NSManagedObject]) {
+        DispatchQueue.main.async {
+            self.collectionView.reloadData()
+        }
     }
+}
+
+// MARK: - Selection Mode Extension
+extension ListViewController {
     
-    @objc private func selectItemTapped() {
-        
-    }
-    
-    // MARK: - Selection Mode Methods
     @objc private func toggleSelectionMode() {
         isSelectionModeEnabled.toggle()
         
-        // Batch UI updates
         UIView.animate(withDuration: 0.3) {
             self.updateUIForSelectionMode()
             self.view.layoutIfNeeded()
         }
         
-        // Update cells without full reload
         collectionView.visibleCells.forEach { cell in
             if let imageCell = cell as? ImageCell {
                 imageCell.setSelectionMode(self.isSelectionModeEnabled, isSelected: false)
@@ -310,15 +253,13 @@ class ListViewController: UIViewController {
     
     private func updateUIForSelectionMode() {
         if isSelectionModeEnabled {
-            // Selection mode enabled
             navigationItem.rightBarButtonItems = []
             navigationItem.leftBarButtonItems = [cancelButton]
             navigationItem.rightBarButtonItems = [selectAllButton]
             showBottomBar()
         } else {
-            // Selection mode disabled
             navigationItem.leftBarButtonItems = nil
-            navigationItem.rightBarButtonItems = [selectButton, updateButton]
+            navigationItem.rightBarButtonItems = [selectButton]
             hideBottomBar()
             selectedItems.removeAll()
         }
@@ -326,22 +267,17 @@ class ListViewController: UIViewController {
     }
     
     @objc private func selectAllTapped() {
-        // Disable user interaction during updates
         view.isUserInteractionEnabled = false
         
-        // Determine if we're selecting or deselecting all
         let shouldSelectAll = selectedItems.count != dataSource.count
         
-        // Update selection state
         if shouldSelectAll {
             selectedItems = Set((0..<dataSource.count).map { IndexPath(item: $0, section: 0) })
         } else {
             selectedItems.removeAll()
         }
         
-        // Batch UI updates
         UIView.animate(withDuration: 0.2, animations: {
-            // Update visible cells
             self.collectionView.visibleCells.forEach { cell in
                 if let imageCell = cell as? ImageCell {
                     imageCell.setSelectionMode(true, isSelected: shouldSelectAll)
@@ -350,34 +286,25 @@ class ListViewController: UIViewController {
                 }
             }
             
-            // Update delete button state
             self.updateDeleteButtonState()
-            
             self.view.layoutIfNeeded()
         }) { _ in
-            // Re-enable user interaction after updates complete
             self.view.isUserInteractionEnabled = true
         }
     }
     
     @objc private func cancelSelectionTapped() {
-        // Disable user interaction during animation to prevent multiple taps
         view.isUserInteractionEnabled = false
         
-        // Clear selection state
         isSelectionModeEnabled = false
         selectedItems.removeAll()
         
-        // Batch all UI updates together
         UIView.animate(withDuration: 0.2, animations: {
-            // Update navigation items
             self.navigationItem.leftBarButtonItems = nil
-            self.navigationItem.rightBarButtonItems = [self.selectButton, self.updateButton]
+            self.navigationItem.rightBarButtonItems = [self.selectButton]
             
-            // Hide bottom bar
             self.bottomBarBottomConstraint?.constant = 100
             
-            // Update visible cells
             self.collectionView.visibleCells.forEach { cell in
                 if let imageCell = cell as? ImageCell {
                     imageCell.setSelectionMode(false, isSelected: false)
@@ -388,17 +315,17 @@ class ListViewController: UIViewController {
             
             self.view.layoutIfNeeded()
         }) { _ in
-            // Re-enable user interaction after animation completes
             self.view.isUserInteractionEnabled = true
         }
         
-        // Update delete button state
         updateDeleteButtonState()
     }
-    
-    // MARK: - Bottom Bar Methods
+}
+
+// MARK: - Bottom Bar Extension
+extension ListViewController {
     private func showBottomBar() {
-        view.layoutIfNeeded() // Ensure initial layout
+        view.layoutIfNeeded()
         bottomBarBottomConstraint?.constant = 0
         
         UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
@@ -407,7 +334,7 @@ class ListViewController: UIViewController {
     }
     
     private func hideBottomBar() {
-        view.layoutIfNeeded() // Ensure initial layout
+        view.layoutIfNeeded()
         bottomBarBottomConstraint?.constant = 100
         
         UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseIn) {
@@ -424,8 +351,89 @@ class ListViewController: UIViewController {
         deleteButton.backgroundColor = selectedCount > 0 ? .systemRed : .systemGray4
         deleteButton.isEnabled = selectedCount > 0
     }
+}
+
+// MARK: - UICollectionViewDataSource
+extension ListViewController: UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return dataSource.count
+    }
     
-    // MARK: - Delete Methods
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let item = dataSource[indexPath.item]
+        
+        if let item = item as? AppMedia {
+            switch item.mediaType {
+            case "video" :
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCell", for: indexPath) as! VideoCell
+                cell.configure(with: item)
+                cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
+                return cell
+            case "image" :
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ImageCell", for: indexPath) as! ImageCell
+                cell.configure(with: item)
+                cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
+                return cell
+            case .none:
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCell", for: indexPath) as! VideoCell
+                cell.configure(with: item)
+                cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
+                return cell
+            case .some(_):
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCell", for: indexPath) as! VideoCell
+                cell.configure(with: item)
+                cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
+                return cell
+            }
+        }
+        
+        fatalError("Unknown cell type")
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        
+        if isSelectionModeEnabled {
+            if selectedItems.contains(indexPath) {
+                selectedItems.remove(indexPath)
+            } else {
+                selectedItems.insert(indexPath)
+            }
+            
+            // Only reload the selected cell
+            if let cell = collectionView.cellForItem(at: indexPath) {
+                if let imageCell = cell as? ImageCell {
+                    imageCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
+                } else if let videoCell = cell as? VideoCell {
+                    videoCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
+                }
+            }
+            
+            updateDeleteButtonState()
+        } else {
+            // Original detail view presentation code
+            let item = dataSource[indexPath.item]
+            let detailVC: UIViewController
+            if let item = item as? AppMedia {
+                switch item.mediaType {
+                case "video" :
+                    detailVC = VideoDetailViewController(video: item)
+                case "image" :
+                    detailVC = ImageDetailViewController(image: item)
+                case .none:
+                    detailVC = VideoDetailViewController(video: item)
+                case .some(_):
+                    detailVC = VideoDetailViewController(video: item)
+                }
+                let navController = UINavigationController(rootViewController: detailVC)
+                navController.modalPresentationStyle = .fullScreen
+                present(navController, animated: true)
+            }
+        }
+    }
+}
+
+// MARK: - Media Handling
+extension ListViewController {
     @objc private func deleteSelectedItems() {
         let message = "Are you sure you want to delete \(selectedItems.count) selected items?"
         let alert = UIAlertController(title: "Confirm Delete", message: message, preferredStyle: .alert)
@@ -463,76 +471,10 @@ class ListViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
-    
-    // MARK: - Media Handling
-    private func fetchAssetsFromAlbum() {
-        loadingIndicator.startAnimating()
-        
-        let fetchResult = PHAsset.fetchAssets(
-            with: selectedCategory == .image ? .image : .video,
-            options: PHFetchOptions()
-        )
-        
-        var assets: [PHAsset] = []
-        fetchResult.enumerateObjects { asset, _, _ in
-            assets.append(asset)
-        }
-        
-        dataManager.saveMediaFromAssets(assets) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.loadingIndicator.stopAnimating()
-                
-                switch result {
-                case .success(let updateInfo):
-                    self?.showUpdateResultPopup(with: updateInfo)
-                    self?.loadData()
-                case .failure(let error):
-                    self?.showAlert(title: "Error", message: error.localizedDescription)
-                }
-            }
-        }
-    }
-    
-    private func showUpdateResultPopup(with info: DataUpdateInfo) {
-        let popupView = UIView()
-        popupView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        popupView.layer.cornerRadius = 10
-        popupView.translatesAutoresizingMaskIntoConstraints = false
-        
-        let label = UILabel()
-        label.text = info.message
-        label.textColor = .white
-        label.textAlignment = .center
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        
-        popupView.addSubview(label)
-        view.addSubview(popupView)
-        
-        NSLayoutConstraint.activate([
-            popupView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            popupView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-            popupView.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.9),
-            
-            label.topAnchor.constraint(equalTo: popupView.topAnchor, constant: 16),
-            label.bottomAnchor.constraint(equalTo: popupView.bottomAnchor, constant: -16),
-            label.leadingAnchor.constraint(equalTo: popupView.leadingAnchor, constant: 16),
-            label.trailingAnchor.constraint(equalTo: popupView.trailingAnchor, constant: -16)
-        ])
-        
-        UIView.animate(withDuration: 0.3) {
-            popupView.alpha = 1.0
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            UIView.animate(withDuration: 0.3, animations: {
-                popupView.alpha = 0.0
-            }) { _ in
-                popupView.removeFromSuperview()
-            }
-        }
-    }
-    
+}
+
+// MARK: - Permission Handling
+extension ListViewController {
     private func requestPhotoLibraryAccess(completion: @escaping (Bool) -> Void) {
         let status = PHPhotoLibrary.authorizationStatus()
         if status == .notDetermined {
@@ -551,70 +493,6 @@ class ListViewController: UIViewController {
     }
 }
 
-// MARK: - UICollectionViewDataSource
-extension ListViewController: UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return dataSource.count
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let item = dataSource[indexPath.item]
-        
-        if let video = item as? AppVideo {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCell", for: indexPath) as! VideoCell
-            cell.configure(with: video)
-            cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
-            return cell
-        } else if let image = item as? AppImage {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ImageCell", for: indexPath) as! ImageCell
-            cell.configure(with: image)
-            cell.setSelectionMode(isSelectionModeEnabled, isSelected: selectedItems.contains(indexPath))
-            return cell
-        }
-        
-        fatalError("Unknown cell type")
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        
-        if isSelectionModeEnabled {
-            if selectedItems.contains(indexPath) {
-                selectedItems.remove(indexPath)
-            } else {
-                selectedItems.insert(indexPath)
-            }
-            
-            // Only reload the selected cell
-            if let cell = collectionView.cellForItem(at: indexPath) {
-                if let imageCell = cell as? ImageCell {
-                    imageCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
-                } else if let videoCell = cell as? VideoCell {
-                    videoCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
-                }
-            }
-            
-            updateDeleteButtonState()
-        } else {
-            // Original detail view presentation code
-            let item = dataSource[indexPath.item]
-            
-            let detailVC: UIViewController
-            if let video = item as? AppVideo {
-                detailVC = VideoDetailViewController(video: video)
-            } else if let image = item as? AppImage {
-                detailVC = ImageDetailViewController(image: image)
-            } else {
-                return
-            }
-            let navController = UINavigationController(rootViewController: detailVC)
-            navController.modalPresentationStyle = .fullScreen
-            present(navController, animated: true)
-        }
-        
-        
-    }
-}
-
 // MARK: - UICollectionViewDelegateFlowLayout
 extension ListViewController: UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -626,3 +504,5 @@ extension ListViewController: UICollectionViewDelegate, UICollectionViewDelegate
         }
     }
 }
+    
+    
