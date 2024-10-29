@@ -27,8 +27,8 @@ final class MediaCell: UITableViewCell {
     
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .boldSystemFont(ofSize: 16)
-        label.textColor = .label
+        label.font = DefaultValue.Fonts.bodyFont.bold()
+        label.textColor = DefaultValue.Colors.accentColor
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -36,7 +36,7 @@ final class MediaCell: UITableViewCell {
     private let countLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14)
-        label.textColor = .secondaryLabel
+        label.textColor = DefaultValue.Colors.footnoteColor
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -52,6 +52,7 @@ final class MediaCell: UITableViewCell {
     // MARK: - Initialization
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        backgroundColor = DefaultValue.Colors.secondaryColor
         setupUI()
     }
     

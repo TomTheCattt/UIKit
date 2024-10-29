@@ -16,7 +16,13 @@ class ContainerViewController: UIViewController {
     private let homeViewController = HomeViewController()
     private var navVC: UINavigationController?
     
-    private let menuWidth: CGFloat = UIScreen.main.bounds.width * 0.8
+    private var menuWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        return isPortrait ? screenWidth * 0.8 : screenWidth * 0.4
+    }
+    private var isPortrait: Bool {
+        return UIDevice.current.orientation.isPortrait || UIDevice.current.orientation == .unknown
+    }
     private var menuState: MenuState = .closed
     
     private enum MenuState {
@@ -40,6 +46,13 @@ class ContainerViewController: UIViewController {
         super.viewDidLoad()
         setupChildViewControllers()
         setupGestures()
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(orientationDidChange),
+                                               name: UIDevice.orientationDidChangeNotification,
+                                               object: nil)
+    }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
@@ -76,14 +89,21 @@ extension ContainerViewController {
     
     private func setupNavigationController() {
         let navVC = UINavigationController(rootViewController: homeViewController)
+        
+            navVC.navigationBar.isTranslucent = false
         addChild(navVC)
         view.addSubview(navVC.view)
         navVC.didMove(toParent: self)
         self.navVC = navVC
     }
     
+    
     private func setupBlurView() {
         view.addSubview(blurView)
+        updateBlurViewFrame()
+    }
+    
+    private func updateBlurViewFrame() {
         blurView.frame = view.bounds
     }
     
@@ -99,7 +119,38 @@ extension ContainerViewController {
         view.addGestureRecognizer(panGesture)
     }
     
+    private func updateSideMenuFrame(for state: MenuState) {
+        let xPosition: CGFloat = state == .closed ? -menuWidth : 0
+        sideMenuController.view.frame = CGRect(x: xPosition,
+                                               y: 0,
+                                               width: menuWidth,
+                                               height: view.bounds.height)
+    }
+    
+    private func updateNavControllerFrame(for state: MenuState) {
+        let xPosition: CGFloat = state == .closed ? 0 : menuWidth
+        navVC?.view.frame = CGRect(x: xPosition,
+                                   y: 0,
+                                   width: view.bounds.width,
+                                   height: view.bounds.height)
+    }
+    
 }
+
+// MARK: - Orientation Handling
+extension ContainerViewController {
+    @objc private func orientationDidChange() {
+        // Đợi một chút để hệ thống hoàn tất việc xoay màn hình
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            
+            self.updateBlurViewFrame()
+            self.updateSideMenuFrame(for: self.menuState)
+            self.updateNavControllerFrame(for: self.menuState)
+        }
+    }
+}
+
 
 // MARK: - Menu Handling Methods
 extension ContainerViewController {
@@ -109,23 +160,22 @@ extension ContainerViewController {
     private func toggleMenu(shouldOpen: Bool) {
         guard canToggleMenu() else { return }
         
-        let menuXPosition = shouldOpen ? 0 : -menuWidth
-        let navVCXPosition = shouldOpen ? menuWidth : 0
+        let targetState: MenuState = shouldOpen ? .opened : .closed
         let blurAlpha: CGFloat = shouldOpen ? 1 : 0
         
         UIView.animate(
-            withDuration: 1,
+            withDuration: 0.5,
             delay: 0,
             usingSpringWithDamping: 1,
             initialSpringVelocity: 0,
             options: .curveEaseInOut
         ) {
-            self.sideMenuController.view.frame.origin.x = menuXPosition
-            self.navVC?.view.frame.origin.x = navVCXPosition
+            self.updateSideMenuFrame(for: targetState)
+            self.updateNavControllerFrame(for: targetState)
             self.blurView.alpha = blurAlpha
         } completion: { done in
             if done {
-                self.menuState = shouldOpen ? .opened : .closed
+                self.menuState = targetState
             }
         }
     }
@@ -147,8 +197,8 @@ extension ContainerViewController {
     private func handlePanEnded(_ translation: CGPoint) {
         guard canToggleMenu() else { return }
         
-        let shouldOpen = (menuState == .closed && translation.x > view.bounds.width * 0.4) ||
-            (menuState == .opened && translation.x > -view.bounds.width * 0.4)
+        let shouldOpen = (menuState == .closed && translation.x > menuWidth * 0.5) ||
+        (menuState == .opened && translation.x > -menuWidth * 0.5)
         toggleMenu(shouldOpen: shouldOpen)
     }
     

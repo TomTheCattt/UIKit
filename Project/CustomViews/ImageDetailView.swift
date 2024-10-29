@@ -1,5 +1,5 @@
 //
-//  ImageDetailViewController.swift
+//  ImageDetailView.swift
 //  Project
 //
 //  Created by Việt Anh Nguyễn on 23/10/2024.
@@ -9,14 +9,20 @@ import Foundation
 import UIKit
 import Photos
 
-// MARK: - ImageDetailViewController
-class ImageDetailViewController: UIViewController {
+// MARK: - ImageDetailViewDelegate
+protocol ImageDetailViewDelegate: AnyObject {
+    func imageDetailViewDidRequestDismiss(_ view: ImageDetailView)
+}
+
+// MARK: - ImageDetailView
+class ImageDetailView: UIView {
     // MARK: - Properties
     
     private var image: AppMedia
     private var initialTouchPoint: CGPoint = .zero
     private let dismissThreshold: CGFloat = 100
     private var imageViewTopConstraint: NSLayoutConstraint?
+    weak var delegate: ImageDetailViewDelegate?
     
     // MARK: - UI Elements
     
@@ -27,62 +33,47 @@ class ImageDetailViewController: UIViewController {
         return view
     }()
     
+    private let closeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "xmark"), for: .normal)
+        button.tintColor = DefaultValue.Colors.accentColor
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     // MARK: - Initialization
+    
     init(image: AppMedia) {
         self.image = image
-        super.init(nibName: nil, bundle: nil)
+        super.init(frame: .zero)
+        setupUI()
+        loadImage()
+        backgroundColor = DefaultValue.Colors.secondaryColor
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    // MARK: - Lifecycle
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupUI()
-        loadImage()
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        navigationItem.title = nil
-        navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
-        navigationController?.navigationBar.shadowImage = UIImage()
-        navigationController?.navigationBar.tintColor = .black
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
-        navigationController?.navigationBar.shadowImage = nil
-    }
-    
-}
-
-// MARK: - Setup
-extension ImageDetailViewController {
-    
     // MARK: - Setup
+    
     private func setupUI() {
-        view.backgroundColor = .white
         
-        let closeButton = UIBarButtonItem(
-            image: UIImage(systemName: "xmark"),
-            style: .plain,
-            target: self,
-            action: #selector(closeTapped)
-        )
-        navigationItem.rightBarButtonItem = closeButton
+        addSubview(imageView)
+        addSubview(closeButton)
         
-        view.addSubview(imageView)
-        imageViewTopConstraint = imageView.topAnchor.constraint(equalTo: view.topAnchor)
+        imageViewTopConstraint = imageView.topAnchor.constraint(equalTo: topAnchor)
         
         NSLayoutConstraint.activate([
             imageViewTopConstraint!,
-            imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            imageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            closeButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            closeButton.widthAnchor.constraint(equalToConstant: 44),
+            closeButton.heightAnchor.constraint(equalToConstant: 44)
         ])
         
         let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
@@ -92,6 +83,7 @@ extension ImageDetailViewController {
         imageView.addGestureRecognizer(panGesture)
         
         imageView.isUserInteractionEnabled = true
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
     }
     
     private func loadImage() {
@@ -107,7 +99,7 @@ extension ImageDetailViewController {
         }
 
         let imageManager = PHImageManager.default()
-        let targetSize = CGSize(width: imageView.bounds.width, height: imageView.bounds.height)
+        let targetSize = CGSize(width: bounds.width, height: bounds.height)
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.isSynchronous = false
@@ -126,10 +118,10 @@ extension ImageDetailViewController {
 }
 
 // MARK: - Actions
-extension ImageDetailViewController {
+extension ImageDetailView {
     
     @objc private func closeTapped() {
-        dismiss(animated: true)
+        delegate?.imageDetailViewDidRequestDismiss(self)
     }
     
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
@@ -143,7 +135,7 @@ extension ImageDetailViewController {
     }
     
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-        let touchPoint = gesture.translation(in: view)
+        let touchPoint = gesture.translation(in: self)
         
         switch gesture.state {
         case .began:
@@ -154,28 +146,23 @@ extension ImageDetailViewController {
                 imageViewTopConstraint?.constant = touchPoint.y
                 
                 let progress = min(1.0, touchPoint.y / dismissThreshold)
-                view.backgroundColor = UIColor.white.withAlphaComponent(1 - progress * 0.6)
+                backgroundColor = DefaultValue.Colors.secondaryColor.withAlphaComponent(1 - progress * 0.6)
             }
             
         case .ended:
-            let velocity = gesture.velocity(in: view)
+            let velocity = gesture.velocity(in: self)
             
             if touchPoint.y > dismissThreshold || velocity.y > 1000 {
-                // Animate dismiss
-                UIView.animate(withDuration: 0.3, animations: { [weak self] in
-                    guard let self = self else { return }
-                    self.imageViewTopConstraint?.constant = self.view.frame.height
-                    self.view.backgroundColor = .clear
-                }) { [weak self] _ in
-                    self?.dismiss(animated: false)
-                }
+                // Notify delegate to handle dismiss
+                delegate?.imageDetailViewDidRequestDismiss(self)
             } else {
                 UIView.animate(withDuration: 0.3) { [weak self] in
                     self?.imageViewTopConstraint?.constant = 0
-                    self?.view.backgroundColor = .white
-                    self?.view.layoutIfNeeded()
+                    self?.backgroundColor = DefaultValue.Colors.secondaryColor
+                    self?.layoutIfNeeded()
                 }
             }
+            
         default:
             break
         }

@@ -14,22 +14,28 @@ class VideoCell: UICollectionViewCell {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 8
         return imageView
     }()
     
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.textColor = .label
-        label.font = .systemFont(ofSize: 16)
+        label.textColor = DefaultValue.Colors.accentColor
+        label.font = DefaultValue.Fonts.bodyFont.bold()
         return label
     }()
     
     private let durationLabel: UILabel = {
         let label = UILabel()
-        label.textColor = .gray
+        label.textColor = DefaultValue.Colors.footnoteColor
         label.font = .systemFont(ofSize: 14)
         return label
+    }()
+    
+    private let containerView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = DefaultValue.Colors.sideMenuBackgroundColor
+        return view
     }()
     
     private let playButton: UIButton = {
@@ -37,7 +43,6 @@ class VideoCell: UICollectionViewCell {
         button.tintColor = .white
         button.setImage(UIImage(systemName: "play.fill"), for: .normal)
         button.backgroundColor = .systemIndigo
-        button.layer.cornerRadius = 15
         return button
     }()
     
@@ -51,6 +56,7 @@ class VideoCell: UICollectionViewCell {
     //MARK: - Initialization
     override init(frame: CGRect) {
         super.init(frame: frame)
+        backgroundColor = DefaultValue.Colors.primaryColor
         setupViews()
     }
     
@@ -63,38 +69,47 @@ class VideoCell: UICollectionViewCell {
 extension VideoCell {
     
     // MARK: - Setup
+
+    
     private func setupViews() {
         backgroundColor = .clear
         
+        contentView.addSubview(containerView)
         contentView.addSubview(thumbnailImageView)
+        contentView.addSubview(playButton)
         contentView.addSubview(titleLabel)
         contentView.addSubview(durationLabel)
-        contentView.addSubview(playButton)
         contentView.addSubview(dimView)
         
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        durationLabel.translatesAutoresizingMaskIntoConstraints = false
         playButton.translatesAutoresizingMaskIntoConstraints = false
         dimView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        durationLabel.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
+            
             thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            thumbnailImageView.widthAnchor.constraint(equalToConstant: 64),
-            thumbnailImageView.heightAnchor.constraint(equalToConstant: 64),
+            thumbnailImageView.widthAnchor.constraint(equalToConstant: 80),
+            thumbnailImageView.heightAnchor.constraint(equalToConstant: 80),
             
-            titleLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
-            titleLabel.topAnchor.constraint(equalTo: thumbnailImageView.topAnchor, constant: 8),
-            titleLabel.trailingAnchor.constraint(equalTo: playButton.leadingAnchor, constant: -8),
+            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 20),
             
-            durationLabel.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 12),
-            durationLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 90),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 35),
             
-            playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            playButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            playButton.widthAnchor.constraint(equalToConstant: 30),
-            playButton.heightAnchor.constraint(equalToConstant: 30),
+            durationLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 90),
+            durationLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 60),
+            
+            playButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            playButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            playButton.widthAnchor.constraint(equalToConstant: 20),
+            playButton.heightAnchor.constraint(equalToConstant: 20),
             
             dimView.topAnchor.constraint(equalTo: contentView.topAnchor),
             dimView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),

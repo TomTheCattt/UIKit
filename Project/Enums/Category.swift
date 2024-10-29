@@ -17,8 +17,8 @@ enum CategoryType: String {
     
     var title: String {
         switch self {
-        case .image: return "Images"
-        case .video: return "Videos"
+        case .image: return DefaultValue.String.imageViewTitle
+        case .video: return DefaultValue.String.videoViewTitle
         }
     }
     

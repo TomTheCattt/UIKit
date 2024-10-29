@@ -33,7 +33,12 @@ class HomeViewController: UIViewController {
     var loadingStateDidChange: ((LoadingState) -> Void)?
     
     // MARK: UI Element(s)
-    private let tableView = UITableView()
+    private let tableView: UITableView = {
+        let tableView = UITableView()
+        tableView.backgroundColor = DefaultValue.Colors.secondaryColor
+        return tableView
+    }()
+    
     private let loadingView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
@@ -57,7 +62,6 @@ class HomeViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         setupNavigationBar()
         setupTableView()
         setupLoadingView()
@@ -70,15 +74,15 @@ class HomeViewController: UIViewController {
 extension HomeViewController {
     
     private func setupNavigationBar() {
-        title = "Home"
+        title = DefaultValue.String.homeViewTitle.uppercased()
         
-        let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3"),
+        let sideMenuButton = UIBarButtonItem(image: UIImage(systemName: DefaultValue.Icon.threeLineHorizontalIcon),
                                              style: .plain,
                                              target: self,
                                              action: #selector(showSideMenu))
         navigationItem.leftBarButtonItem = sideMenuButton
         
-        let refreshButton = UIBarButtonItem(image: UIImage(systemName: "arrow.clockwise"),
+        let refreshButton = UIBarButtonItem(image: UIImage(systemName: DefaultValue.Icon.reloadIcon),
                                             style: .plain,
                                             target: self,
                                             action: #selector(refreshAllData))
@@ -87,6 +91,7 @@ extension HomeViewController {
     
     private func setupTableView() {
         view.addSubview(tableView)
+        view.backgroundColor = DefaultValue.Colors.primaryColor
         
         tableView.delegate = self
         tableView.dataSource = self

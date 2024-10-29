@@ -14,6 +14,7 @@ class ListViewController: UIViewController {
     private var isSelectionModeEnabled = false
     private var selectedItems: Set<IndexPath> = []
     private var bottomBarBottomConstraint: NSLayoutConstraint?
+    private var mediaPresentationController: MediaPresentationController?
     
     private lazy var loadingIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
@@ -57,6 +58,7 @@ class ListViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        mediaPresentationController = MediaPresentationController(parentViewController: self)
         setupDataManager()
         setupUI()
         loadData()
@@ -80,7 +82,6 @@ extension ListViewController {
     }
     
     private func setupUI() {
-        view.backgroundColor = .white
         setupNavigationTitle()
         setupCollectionView()
         setupNavigationBar()
@@ -89,7 +90,7 @@ extension ListViewController {
     }
     
     private func setupNavigationTitle() {
-        title = selectedCategory == .image ? "All Images" : "All Videos"
+        title = selectedCategory == .image ? DefaultValue.String.imageViewTitle.uppercased() : DefaultValue.String.videoViewTitle.uppercased()
     }
     
     private func setupCollectionView() {
@@ -106,7 +107,7 @@ extension ListViewController {
         
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        collectionView.backgroundColor = .white
+        collectionView.backgroundColor = DefaultValue.Colors.secondaryColor
         collectionView.delegate = self
         collectionView.dataSource = self
         
@@ -391,45 +392,40 @@ extension ListViewController: UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        
-        if isSelectionModeEnabled {
-            if selectedItems.contains(indexPath) {
-                selectedItems.remove(indexPath)
+            if isSelectionModeEnabled {
+                if selectedItems.contains(indexPath) {
+                    selectedItems.remove(indexPath)
+                } else {
+                    selectedItems.insert(indexPath)
+                }
+                
+                // Only reload the selected cell
+                if let cell = collectionView.cellForItem(at: indexPath) {
+                    if let imageCell = cell as? ImageCell {
+                        imageCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
+                    } else if let videoCell = cell as? VideoCell {
+                        videoCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
+                    }
+                }
+                
+                updateDeleteButtonState()
             } else {
-                selectedItems.insert(indexPath)
-            }
-            
-            // Only reload the selected cell
-            if let cell = collectionView.cellForItem(at: indexPath) {
-                if let imageCell = cell as? ImageCell {
-                    imageCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
-                } else if let videoCell = cell as? VideoCell {
-                    videoCell.setSelectionMode(true, isSelected: selectedItems.contains(indexPath))
+                let item = dataSource[indexPath.item]
+                if let item = item as? AppMedia {
+                    if item.mediaType == "image" {
+                        let imageDetailView = ImageDetailView(image: item)
+                        imageDetailView.delegate = self
+                        mediaPresentationController?.present(mediaView: imageDetailView)
+                    } else if item.mediaType == "video" {
+                        let videoPlayerView = VideoPlayerView(video: item)
+                        videoPlayerView.onDismiss = { [weak self] in
+                            self?.mediaPresentationController?.dismiss()
+                        }
+                        mediaPresentationController?.present(mediaView: videoPlayerView)
+                    }
                 }
-            }
-            
-            updateDeleteButtonState()
-        } else {
-            // Original detail view presentation code
-            let item = dataSource[indexPath.item]
-            let detailVC: UIViewController
-            if let item = item as? AppMedia {
-                switch item.mediaType {
-                case "video" :
-                    detailVC = VideoDetailViewController(video: item)
-                case "image" :
-                    detailVC = ImageDetailViewController(image: item)
-                case .none:
-                    detailVC = VideoDetailViewController(video: item)
-                case .some(_):
-                    detailVC = VideoDetailViewController(video: item)
-                }
-                let navController = UINavigationController(rootViewController: detailVC)
-                navController.modalPresentationStyle = .fullScreen
-                present(navController, animated: true)
             }
         }
-    }
 }
 
 // MARK: - Media Handling
@@ -502,6 +498,82 @@ extension ListViewController: UICollectionViewDelegate, UICollectionViewDelegate
             let width = collectionView.bounds.width - 32
             return CGSize(width: width, height: 72)
         }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
+        if selectedCategory == .video {
+            return UIEdgeInsets.init(top: 20, left: 0, bottom: 0, right: 0)
+        }
+        return UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+    }
+}
+
+// MARK: - MediaPresentationController
+class MediaPresentationController {
+    private weak var parentViewController: UIViewController?
+    private var containerView: UIView?
+    private var overlayView: UIView?
+    
+    init(parentViewController: UIViewController) {
+        self.parentViewController = parentViewController
+    }
+    
+    func present(mediaView: UIView) {
+        guard let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) else { return }
+        
+        let overlay = UIView(frame: window.bounds)
+                overlay.backgroundColor = .black
+                overlay.alpha = 0
+                window.addSubview(overlay)
+                self.overlayView = overlay
+                
+                // Create container view
+                let container = UIView(frame: window.bounds)
+                container.backgroundColor = .clear
+                window.addSubview(container)
+                self.containerView = container
+                
+                // Setup safe area handling
+                if #available(iOS 11.0, *) {
+                    container.insetsLayoutMarginsFromSafeArea = false
+                    mediaView.insetsLayoutMarginsFromSafeArea = false
+                }
+        
+        // Add media view to container
+        mediaView.frame = container.bounds
+        mediaView.alpha = 0
+        container.addSubview(mediaView)
+        
+        // Animate presentation
+        UIView.animate(withDuration: 0.3) {
+            overlay.alpha = 0.5
+            mediaView.alpha = 1
+        }
+        
+        window.windowLevel = .statusBar + 1
+    }
+    
+    func dismiss(completion: (() -> Void)? = nil) {
+        UIView.animate(withDuration: 0.3, animations: {
+                    self.overlayView?.alpha = 0
+                    self.containerView?.alpha = 0
+                }, completion: { _ in
+                    // Reset window level
+                    if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+                        window.windowLevel = .normal
+                    }
+                    
+                    self.overlayView?.removeFromSuperview()
+                    self.containerView?.removeFromSuperview()
+                    completion?()
+                })
+    }
+}
+
+// MARK: - ImageDetailViewDelegate Extension
+extension ListViewController: ImageDetailViewDelegate {
+    func imageDetailViewDidRequestDismiss(_ view: ImageDetailView) {
+        mediaPresentationController?.dismiss()
     }
 }
     

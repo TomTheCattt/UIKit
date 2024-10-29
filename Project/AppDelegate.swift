@@ -12,6 +12,10 @@ import CoreData
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+//        let navigationBarAppearance = UINavigationBar.appearance()
+//        navigationBarAppearance.tintColor = DefaultValue.Colors.accentColor
+//        navigationBarAppearance.backgroundColor = DefaultValue.Colors.sideMenuBackgroundColor
+//        navigationBarAppearance.titleTextAttributes = [NSAttributedString.Key.foregroundColor: DefaultValue.Colors.accentColor, NSAttributedString.Key.font: DefaultValue.Fonts.titleFont]
         return true
     }
 
