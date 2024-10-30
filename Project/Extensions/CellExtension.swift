@@ -1,13 +1,12 @@
 //
-//  UICellControllerExtension.swift
+//  CellExtension.swift
 //  Project
 //
-//  Created by Việt Anh Nguyễn on 25/10/2024.
+//  Created by Việt Anh Nguyễn on 30/10/2024.
 //
 
 import Foundation
 import UIKit
-
 
 extension UICollectionViewCell {
     func setSelectionMode(_ enabled: Bool, isSelected: Bool) {

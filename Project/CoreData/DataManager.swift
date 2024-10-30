@@ -11,7 +11,7 @@ import Photos
 import AVFoundation
 
 // MARK: - ListViewDataManager
-final class ListViewDataManager {
+final class DataManager {
     // MARK: - Properties
     private let context: NSManagedObjectContext
     private let mediaType: String?
@@ -25,7 +25,7 @@ final class ListViewDataManager {
 }
 
 // MARK: - Data Fetching
-extension ListViewDataManager {
+extension DataManager {
     func fetchData(completion: @escaping (Result<[NSManagedObject], Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -49,7 +49,7 @@ extension ListViewDataManager {
 }
 
 // MARK: - Media Saving
-extension ListViewDataManager {
+extension DataManager {
     func saveMediaFromAsset(_ asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
         guard asset.localIdentifier.isEmpty == false else {
             completion(.failure(NSError(domain: "AssetError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid asset identifier"])))
@@ -177,7 +177,7 @@ extension ListViewDataManager {
 }
 
 // MARK: - Asset Management
-extension ListViewDataManager {
+extension DataManager {
     private func isAssetExists(_ identifier: String) -> Bool {
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppMedia")
         fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", identifier)
@@ -193,7 +193,7 @@ extension ListViewDataManager {
 }
 
 // MARK: - Deletion
-extension ListViewDataManager {
+extension DataManager {
     func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
         context.perform {
             for item in items {
@@ -211,7 +211,7 @@ extension ListViewDataManager {
 }
 
 // MARK: - Utilities
-extension ListViewDataManager {
+extension DataManager {
     private func generateThumbnail(for video: AVAsset) -> UIImage? {
         let assetImgGenerate = AVAssetImageGenerator(asset: video)
         assetImgGenerate.appliesPreferredTrackTransform = true

@@ -10,8 +10,8 @@ final class MediaCell: UITableViewCell {
     static let reuseIdentifier = String(describing: MediaCell.self)
     
     // MARK: - Properties
-    private lazy var dataManager: ListViewDataManager = {
-        return ListViewDataManager(context: CoreDataManager.shared.context, mediaType: nil)
+    private lazy var dataManager: DataManager = {
+        return DataManager(context: CoreDataManager.shared.context, mediaType: nil)
     }()
     
     // MARK: - UI Components
@@ -100,7 +100,7 @@ extension MediaCell {
         titleLabel.text = category.title
         
         // Initialize data manager with specific media type
-        dataManager = ListViewDataManager(context: CoreDataManager.shared.context, mediaType: category.mediaType)
+        dataManager = DataManager(context: CoreDataManager.shared.context, mediaType: category.mediaType)
         
         // Fetch data to get count and thumbnails
         dataManager.fetchData { [weak self] result in
