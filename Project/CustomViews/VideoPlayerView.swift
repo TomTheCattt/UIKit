@@ -20,6 +20,7 @@ class VideoPlayerView: UIView {
     private var controlsTimer: Timer?
     private var playerItem: AVPlayerItem?
     private var itemObserver: NSKeyValueObservation?
+    private var locked = false
     
     // MARK: - UI Components
     private lazy var playerLayer: AVPlayerLayer = {
@@ -97,8 +98,7 @@ class VideoPlayerView: UIView {
         return label
     }()
     
-    private lazy var leftButton1: UIButton = createButton(systemName: "button.programmable")
-    private lazy var leftButton2: UIButton = createButton(systemName: "button.programmable")
+    private lazy var lockButton: UIButton = createButton(systemName: locked ? "lock.fill" : "lock.open.fill")
     private lazy var rightButton: UIButton = createButton(systemName: "button.programmable")
     
     private lazy var previousButton: UIButton = createButton(systemName: "backward.end.fill")
@@ -170,8 +170,7 @@ extension VideoPlayerView {
     }
     
     private func setupButtonGroups() {
-        leftButtonsStackView.addArrangedSubview(leftButton1)
-        leftButtonsStackView.addArrangedSubview(leftButton2)
+        leftButtonsStackView.addArrangedSubview(lockButton)
         
         centerButtonsStackView.addArrangedSubview(previousButton)
         centerButtonsStackView.addArrangedSubview(backwardButton)
@@ -219,6 +218,7 @@ extension VideoPlayerView {
         backwardButton.addTarget(self, action: #selector(backwardButtonTapped), for: .touchUpInside)
         forwardButton.addTarget(self, action: #selector(forwardButtonTapped), for: .touchUpInside)
         videoSlider.addTarget(self, action: #selector(sliderValueChanged), for: .valueChanged)
+        lockButton.addTarget(self, action: #selector(lockButtonTapped), for: .touchUpInside)
     }
 }
 
@@ -408,6 +408,14 @@ extension VideoPlayerView {
         button.tintColor = .white
         return button
     }
+    
+    private func lockScreen() {
+        if locked {
+            var supportedInterfaceOrientations: UIInterfaceOrientation {
+                return .portrait
+            }
+        }
+    }
 }
 
 // MARK: - Notification Handlers
@@ -475,5 +483,9 @@ extension VideoPlayerView {
         let time = CMTime(seconds: Double(videoSlider.value) * duration.seconds, preferredTimescale: 1)
         player?.seek(to: time)
         showControls()
+    }
+    
+    @objc private func lockButtonTapped() {
+        locked.toggle()
     }
 }

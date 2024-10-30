@@ -513,36 +513,115 @@ class MediaPresentationController {
     private weak var parentViewController: UIViewController?
     private var containerView: UIView?
     private var overlayView: UIView?
+    private var mediaView: UIView?
+    private var mediaViewConstraints: [NSLayoutConstraint] = []
     
     init(parentViewController: UIViewController) {
         self.parentViewController = parentViewController
+        setupOrientationNotifications()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    private func setupOrientationNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOrientationChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func handleOrientationChange() {
+        updateLayout(for: UIDevice.current.orientation)
+    }
+    
+    private func updateLayout(for orientation: UIDeviceOrientation) {
+        guard let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }),
+              let containerView = containerView,
+              let mediaView = mediaView else { return }
+        
+        // Deactivate existing constraints
+        NSLayoutConstraint.deactivate(mediaViewConstraints)
+        mediaViewConstraints.removeAll()
+        
+        let newFrame: CGRect
+        
+        if orientation.isLandscape {
+            // In landscape, use the window's bounds but swap width and height if needed
+            let width = max(window.bounds.width, window.bounds.height)
+            let height = min(window.bounds.width, window.bounds.height)
+            newFrame = CGRect(x: 0, y: 0, width: width, height: height)
+            
+            // Set up landscape constraints
+            mediaViewConstraints = [
+                mediaView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+                mediaView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+                mediaView.widthAnchor.constraint(equalTo: containerView.widthAnchor),
+                mediaView.heightAnchor.constraint(equalTo: containerView.heightAnchor)
+            ]
+        } else {
+            // In portrait, use the window's bounds directly
+            newFrame = window.bounds
+            
+            // Set up portrait constraints
+            mediaViewConstraints = [
+                mediaView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                mediaView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                mediaView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                mediaView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ]
+        }
+        
+        UIView.animate(withDuration: 0.3) {
+            self.containerView?.frame = newFrame
+            self.overlayView?.frame = newFrame
+            
+            // Activate new constraints
+            NSLayoutConstraint.activate(self.mediaViewConstraints)
+            self.containerView?.layoutIfNeeded()
+        }
     }
     
     func present(mediaView: UIView) {
         guard let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) else { return }
         
+        self.mediaView = mediaView
+        
+        // Create and setup overlay view
         let overlay = UIView(frame: window.bounds)
-                overlay.backgroundColor = .black
-                overlay.alpha = 0
-                window.addSubview(overlay)
-                self.overlayView = overlay
-                
-                // Create container view
-                let container = UIView(frame: window.bounds)
-                container.backgroundColor = .clear
-                window.addSubview(container)
-                self.containerView = container
-                
-                // Setup safe area handling
-                if #available(iOS 11.0, *) {
-                    container.insetsLayoutMarginsFromSafeArea = false
-                    mediaView.insetsLayoutMarginsFromSafeArea = false
-                }
+        overlay.backgroundColor = .black
+        overlay.alpha = 0
+        window.addSubview(overlay)
+        self.overlayView = overlay
+        
+        // Create and setup container view
+        let container = UIView(frame: window.bounds)
+        container.backgroundColor = .clear
+        window.addSubview(container)
+        self.containerView = container
+        
+        // Setup safe area handling
+        if #available(iOS 11.0, *) {
+            container.insetsLayoutMarginsFromSafeArea = false
+            mediaView.insetsLayoutMarginsFromSafeArea = false
+        }
         
         // Add media view to container
-        mediaView.frame = container.bounds
-        mediaView.alpha = 0
+        mediaView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(mediaView)
+        mediaView.alpha = 0
+        
+        // Initial constraints setup
+        mediaViewConstraints = [
+            mediaView.topAnchor.constraint(equalTo: container.topAnchor),
+            mediaView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            mediaView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            mediaView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ]
+        NSLayoutConstraint.activate(mediaViewConstraints)
         
         // Animate presentation
         UIView.animate(withDuration: 0.3) {
@@ -550,26 +629,33 @@ class MediaPresentationController {
             mediaView.alpha = 1
         }
         
+        // Ensure window is above status bar
         window.windowLevel = .statusBar + 1
+        
+        // Update layout for current orientation
+        updateLayout(for: UIDevice.current.orientation)
     }
     
     func dismiss(completion: (() -> Void)? = nil) {
         UIView.animate(withDuration: 0.3, animations: {
-                    self.overlayView?.alpha = 0
-                    self.containerView?.alpha = 0
-                }, completion: { _ in
-                    // Reset window level
-                    if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
-                        window.windowLevel = .normal
-                    }
-                    
-                    self.overlayView?.removeFromSuperview()
-                    self.containerView?.removeFromSuperview()
-                    completion?()
-                })
+            self.overlayView?.alpha = 0
+            self.containerView?.alpha = 0
+        }, completion: { _ in
+            // Reset window level
+            if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+                window.windowLevel = .normal
+            }
+            
+            NSLayoutConstraint.deactivate(self.mediaViewConstraints)
+            self.mediaViewConstraints.removeAll()
+            
+            self.overlayView?.removeFromSuperview()
+            self.containerView?.removeFromSuperview()
+            self.mediaView = nil
+            completion?()
+        })
     }
 }
-
 // MARK: - ImageDetailViewDelegate Extension
 extension ListViewController: ImageDetailViewDelegate {
     func imageDetailViewDidRequestDismiss(_ view: ImageDetailView) {

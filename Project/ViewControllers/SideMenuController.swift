@@ -19,9 +19,6 @@ class SideMenuController: UIViewController {
     private var leadingConstraint: NSLayoutConstraint?
     private var trailingConstraint: NSLayoutConstraint?
     private var containerWidthConstraint: NSLayoutConstraint?
-    private var containerCenterXConstraint: NSLayoutConstraint?
-    private var containerLeadingConstraint: NSLayoutConstraint?
-    private var containerTrailingConstraint: NSLayoutConstraint?
     
     // MARK: - UI Elements
     private lazy var containerView: UIView = {
@@ -83,20 +80,19 @@ class SideMenuController: UIViewController {
     
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        updateLayoutForCurrentOrientation()
+        //updateLayoutForCurrentOrientation()
     }
     
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        if traitCollection.horizontalSizeClass != previousTraitCollection?.horizontalSizeClass ||
-           traitCollection.verticalSizeClass != previousTraitCollection?.verticalSizeClass {
-            updateLayoutForCurrentOrientation()
-        }
-    }
+//    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+//        super.traitCollectionDidChange(previousTraitCollection)
+//        if traitCollection.horizontalSizeClass != previousTraitCollection?.horizontalSizeClass ||
+//            traitCollection.verticalSizeClass != previousTraitCollection?.verticalSizeClass {
+//            updateLayoutForCurrentOrientation()
+//        }
+//    }
 }
 
 // MARK: - SideMenuController Setup
-
 extension SideMenuController {
     
     // MARK: - Setup Methods
@@ -113,27 +109,28 @@ extension SideMenuController {
     private func setupInitialConstraints() {
         let safeArea = view.safeAreaLayoutGuide
         
-        // Container view base constraints
+        // Container view constraints
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: safeArea.topAnchor),
-            containerView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+            containerView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor),
+            containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
-        
-        // Create container edge constraints
-        containerLeadingConstraint = containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
-        containerTrailingConstraint = containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         
         // Header constraints
         NSLayoutConstraint.activate([
+            settingsLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 20),
             settingsLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             
             arrowButton.centerYAnchor.constraint(equalTo: settingsLabel.centerYAnchor),
             arrowButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20)
         ])
         
-        // Options stack view constraints
+        // Options stack view constraints with fixed margins
         NSLayoutConstraint.activate([
             optionsStackView.topAnchor.constraint(equalTo: settingsLabel.bottomAnchor, constant: 30),
+            optionsStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
+            optionsStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
             optionsStackView.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -20)
         ])
         
@@ -141,64 +138,82 @@ extension SideMenuController {
         optionButtons.forEach { button in
             button.heightAnchor.constraint(equalToConstant: 50).isActive = true
         }
-        
-        // Store constraints that will be updated based on orientation
-        topConstraint = settingsLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 20)
-        leadingConstraint = optionsStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20)
-        trailingConstraint = optionsStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20)
-        
-        // Activate initial constraints
-        topConstraint?.isActive = true
-        leadingConstraint?.isActive = true
-        trailingConstraint?.isActive = true
     }
     
     private func updateLayoutForCurrentOrientation() {
-        // Deactivate all orientation-specific constraints
-        containerWidthConstraint?.isActive = false
-        containerCenterXConstraint?.isActive = false
-        containerLeadingConstraint?.isActive = false
-        containerTrailingConstraint?.isActive = false
-        
-        let isLandscape = UIDevice.current.orientation.isLandscape
-        let screenWidth = view.bounds.width
-        let screenHeight = view.bounds.height
-        
-        if isLandscape {
-            // In landscape, use fixed width and center
-            let maxWidth = min(screenWidth * 0.7, 500.0)
-            containerWidthConstraint = containerView.widthAnchor.constraint(equalToConstant: maxWidth)
-            containerCenterXConstraint = containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            // Deactivate previous constraints
+            containerWidthConstraint?.isActive = false
+            leadingConstraint?.isActive = false
+            trailingConstraint?.isActive = false
             
-            containerWidthConstraint?.isActive = true
-            containerCenterXConstraint?.isActive = true
-        } else {
-            // In portrait, use edge constraints
-            containerLeadingConstraint?.isActive = true
-            containerTrailingConstraint?.isActive = true
+            let isLandscape = UIDevice.current.orientation.isLandscape
+            let safeArea = view.safeAreaLayoutGuide
+            
+            if isLandscape {
+                // Landscape layout
+                let maxWidth = min(view.bounds.width * 0.7, 500.0)
+                
+                // Width constraint
+                containerWidthConstraint = containerView.widthAnchor.constraint(equalToConstant: maxWidth)
+                
+                // Center horizontally
+                leadingConstraint = containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+                
+                // Activate landscape constraints
+                NSLayoutConstraint.activate([
+                    containerWidthConstraint!,
+                    leadingConstraint!,
+                    containerView.topAnchor.constraint(equalTo: safeArea.topAnchor),
+                    containerView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+                ])
+                
+                // Update stack view spacing for landscape
+                optionsStackView.spacing = 12
+                
+            } else {
+                // Portrait layout
+                // Container takes full width with margins
+                leadingConstraint = containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+                trailingConstraint = containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+                
+                // Activate portrait constraints
+                NSLayoutConstraint.activate([
+                    leadingConstraint!,
+                    trailingConstraint!,
+                    containerView.topAnchor.constraint(equalTo: safeArea.topAnchor),
+                    containerView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+                ])
+                
+                // Update stack view spacing for portrait
+                optionsStackView.spacing = 15
+            }
+            
+            // Update UI elements for current orientation
+            updateUIForCurrentOrientation(isLandscape: isLandscape)
+            
+            // Force layout update
+            view.layoutIfNeeded()
         }
         
-        // Update spacing based on screen size
-        let topSpacing = min(screenHeight * 0.05, 30.0)
-        let sideSpacing = min(screenWidth * 0.05, 20.0)
-        
-        // Update existing constraints
-        topConstraint?.constant = topSpacing
-        leadingConstraint?.constant = sideSpacing
-        trailingConstraint?.constant = -sideSpacing
-        
-        // Update stack view spacing
-        optionsStackView.spacing = min(screenHeight * 0.02, 15.0)
-        
-        view.layoutIfNeeded()
-    }
+        private func updateUIForCurrentOrientation(isLandscape: Bool) {
+            if isLandscape {
+                // Landscape UI adjustments
+                settingsLabel.font = .boldSystemFont(ofSize: DefaultValue.FontSizes.titleFontSize - 2)
+                optionButtons.forEach { button in
+                    button.titleLabel?.font = DefaultValue.Fonts.bodyFont.withSize(DefaultValue.FontSizes.bodyFontSize - 1)
+                }
+            } else {
+                // Portrait UI adjustments
+                settingsLabel.font = .boldSystemFont(ofSize: DefaultValue.FontSizes.titleFontSize)
+                optionButtons.forEach { button in
+                    button.titleLabel?.font = DefaultValue.Fonts.bodyFont
+                }
+            }
+        }
 }
 
 // MARK: - SideMenuController Actions
-
 extension SideMenuController {
-    // MARK: - Actions
-    
     @objc private func backButtonTapped() {
         delegate?.closeButtonTapped()
     }
