@@ -2,16 +2,17 @@ import UIKit
 import CoreData
 import Photos
 
-
-
 // MARK: - MediaCell
+/// A custom UITableViewCell subclass for displaying media album information.
 final class MediaCell: UITableViewCell {
+    
     // MARK: - Static Properties
+    /// The reuse identifier for the cell.
     static let reuseIdentifier = String(describing: MediaCell.self)
     
     // MARK: - Properties
-    private lazy var dataManager: ListViewDataManager = {
-        return ListViewDataManager(context: CoreDataManager.shared.context, mediaType: nil)
+    private lazy var dataManager: DataManager = {
+        return DataManager(context: CoreDataManager.shared.context, mediaType: nil)
     }()
     
     // MARK: - UI Components
@@ -50,21 +51,24 @@ final class MediaCell: UITableViewCell {
     }()
     
     // MARK: - Initialization
+    /// Initializes a new instance of `MediaCell`.
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = DefaultValue.Colors.secondaryColor
         setupUI()
     }
     
+    /// This initializer is not implemented, and attempting to use it will result in a fatal error.
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
 }
 
 // MARK: - Setup And Configure
 extension MediaCell {
+    
     // MARK: - UI Setup
+    /// Sets up the user interface components of the cell.
     private func setupUI() {
         [albumIconView, titleLabel, countLabel, arrowImageView].forEach {
             contentView.addSubview($0)
@@ -96,11 +100,16 @@ extension MediaCell {
     }
     
     // MARK: - Configuration
+    /// Configures the cell with data for a specific media category.
+    ///
+    /// - Parameter category: An instance of `CategoryType` containing information about the media category,
+    /// including the title and media type. This method fetches the count of items in the category and
+    /// updates the UI components accordingly.
     func configure(with category: CategoryType) {
         titleLabel.text = category.title
         
         // Initialize data manager with specific media type
-        dataManager = ListViewDataManager(context: CoreDataManager.shared.context, mediaType: category.mediaType)
+        dataManager = DataManager(context: CoreDataManager.shared.context, mediaType: category.mediaType)
         
         // Fetch data to get count and thumbnails
         dataManager.fetchData { [weak self] result in
@@ -146,6 +155,11 @@ extension MediaCell {
 
 // MARK: - Helper Methods
 extension MediaCell {
+    
+    /// Creates a layered thumbnail image from an array of images.
+    ///
+    /// - Parameter images: An array of `UIImage` instances to be layered.
+    /// - Returns: A single `UIImage` that represents the layered thumbnails.
     private func createLayeredThumbnail(from images: [UIImage]) -> UIImage {
         let size = CGSize(width: 80, height: 80)
         UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
@@ -186,6 +200,7 @@ extension MediaCell {
         return layeredImage ?? UIImage()
     }
     
+    /// Prepares the cell for reuse by resetting its properties.
     override func prepareForReuse() {
         super.prepareForReuse()
         albumIconView.image = nil
@@ -193,6 +208,7 @@ extension MediaCell {
         countLabel.text = nil
     }
     
+    /// Layout adjustments for the cell.
     override func layoutSubviews() {
         super.layoutSubviews()
         

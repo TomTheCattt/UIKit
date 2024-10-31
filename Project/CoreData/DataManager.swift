@@ -1,23 +1,21 @@
-//
-//  ListViewDataManager.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 22/10/2024.
-//
-
 import UIKit
 import CoreData
 import Photos
 import AVFoundation
 
-// MARK: - ListViewDataManager
-final class ListViewDataManager {
+// MARK: - DataManager
+/// A manager class for handling media data operations, including fetching, saving, and deleting media assets using Core Data and the Photos framework.
+final class DataManager {
     // MARK: - Properties
     private let context: NSManagedObjectContext
     private let mediaType: String?
     typealias BatchSaveCompletion = (totalProcessed: Int, totalSkipped: Int)
     
     // MARK: - Initialization
+    /// Initializes a new instance of `DataManager`.
+    /// - Parameters:
+    ///   - context: The Core Data context used for saving and fetching data.
+    ///   - mediaType: The type of media to filter during fetching (e.g., image, video).
     init(context: NSManagedObjectContext, mediaType: String?) {
         self.context = context
         self.mediaType = mediaType
@@ -25,7 +23,9 @@ final class ListViewDataManager {
 }
 
 // MARK: - Data Fetching
-extension ListViewDataManager {
+extension DataManager {
+    /// Fetches media data from Core Data.
+    /// - Parameter completion: A closure that returns the result of the fetch operation, containing an array of `NSManagedObject` or an error.
     func fetchData(completion: @escaping (Result<[NSManagedObject], Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -49,7 +49,11 @@ extension ListViewDataManager {
 }
 
 // MARK: - Media Saving
-extension ListViewDataManager {
+extension DataManager {
+    /// Saves a media asset to Core Data.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` to save.
+    ///   - completion: A closure that returns the result of the save operation, indicating success or failure.
     func saveMediaFromAsset(_ asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
         guard asset.localIdentifier.isEmpty == false else {
             completion(.failure(NSError(domain: "AssetError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid asset identifier"])))
@@ -63,6 +67,10 @@ extension ListViewDataManager {
         }
     }
     
+    /// Saves a media asset to Core Data from a given `PHAsset`.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` to save.
+    ///   - completion: A closure that returns the result of the save operation.
     private func saveMediaToCoreData(from asset: PHAsset, completion: @escaping (DataUpdateResult) -> Void) {
         let media = AppMedia(context: context)
         media.id = UUID()
@@ -78,6 +86,11 @@ extension ListViewDataManager {
         generateAndSaveThumbnail(for: asset, media: media, completion: completion)
     }
 
+    /// Generates and saves a thumbnail for the specified asset.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` for which to generate the thumbnail.
+    ///   - media: The `AppMedia` object to which the thumbnail will be assigned.
+    ///   - completion: A closure that returns the result of the save operation.
     private func generateAndSaveThumbnail(for asset: PHAsset, media: AppMedia, completion: @escaping (DataUpdateResult) -> Void) {
         if asset.mediaType == .image {
             let imageOptions = PHImageRequestOptions()
@@ -128,6 +141,10 @@ extension ListViewDataManager {
         }
     }
 
+    /// Saves the current context and calls the completion handler.
+    /// - Parameters:
+    ///   - completion: A closure that returns the result of the save operation.
+    ///   - successMessage: A message indicating success.
     private func saveContextAndComplete(completion: @escaping (DataUpdateResult) -> Void, successMessage: String) {
         do {
             try context.save()
@@ -137,6 +154,12 @@ extension ListViewDataManager {
         }
     }
     
+    /// Saves multiple media assets from the specified array.
+    /// - Parameters:
+    ///   - assets: An array of `PHAsset` objects to save.
+    ///   - batchSize: The number of assets to process in each batch (default is 20).
+    ///   - progressHandler: A closure that reports progress updates.
+    ///   - completion: A closure that returns the result of the batch save operation.
     func saveMediaFromAssets(_ assets: [PHAsset], batchSize: Int = 20,
                             progressHandler: @escaping (Int, Int) -> Void,
                             completion: @escaping (Result<BatchSaveCompletion, Error>) -> Void) {
@@ -177,7 +200,10 @@ extension ListViewDataManager {
 }
 
 // MARK: - Asset Management
-extension ListViewDataManager {
+extension DataManager {
+    /// Checks if an asset with the specified identifier already exists in Core Data.
+    /// - Parameter identifier: The local identifier of the asset to check.
+    /// - Returns: A boolean indicating whether the asset exists.
     private func isAssetExists(_ identifier: String) -> Bool {
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "AppMedia")
         fetchRequest.predicate = NSPredicate(format: "localIdentifier == %@", identifier)
@@ -193,7 +219,11 @@ extension ListViewDataManager {
 }
 
 // MARK: - Deletion
-extension ListViewDataManager {
+extension DataManager {
+    /// Deletes the specified items from Core Data.
+    /// - Parameters:
+    ///   - items: An array of `NSManagedObject` items to delete.
+    ///   - completion: A closure that returns the result of the delete operation.
     func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
         context.perform {
             for item in items {
@@ -211,7 +241,10 @@ extension ListViewDataManager {
 }
 
 // MARK: - Utilities
-extension ListViewDataManager {
+extension DataManager {
+    /// Generates a thumbnail image for the specified video asset.
+    /// - Parameter video: The video asset for which to generate a thumbnail.
+    /// - Returns: A `UIImage` representing the generated thumbnail, or `nil` if the generation failed.
     private func generateThumbnail(for video: AVAsset) -> UIImage? {
         let assetImgGenerate = AVAssetImageGenerator(asset: video)
         assetImgGenerate.appliesPreferredTrackTransform = true

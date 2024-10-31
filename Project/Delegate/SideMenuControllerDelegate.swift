@@ -7,6 +7,7 @@
 
 import Foundation
 
+/// Defines the method to hide the side menu.
 protocol SideMenuControllerDelegate: AnyObject {
     func closeButtonTapped()
 }

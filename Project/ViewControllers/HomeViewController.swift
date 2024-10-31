@@ -1,12 +1,3 @@
-//
-//  HomeViewController.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 13/10/2024.
-//
-
-import Foundation
-
 import UIKit
 import CoreData
 import Photos
@@ -18,9 +9,9 @@ class HomeViewController: UIViewController {
     
     private let categories = [CategoryType.image, CategoryType.video]
     
-    private lazy var dataManager: ListViewDataManager = {
+    private lazy var dataManager: DataManager = {
         DispatchQueue.main.sync {
-            return ListViewDataManager(context: CoreDataManager.shared.context, mediaType: nil)
+            return DataManager(context: CoreDataManager.shared.context, mediaType: nil)
         }
     }()
     
@@ -32,41 +23,20 @@ class HomeViewController: UIViewController {
     
     var loadingStateDidChange: ((LoadingState) -> Void)?
     
-    // MARK: UI Element(s)
-    private let tableView: UITableView = {
-        let tableView = UITableView()
-        tableView.backgroundColor = DefaultValue.Colors.secondaryColor
-        return tableView
-    }()
-    
-    private let loadingView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        view.isHidden = true
-        return view
-    }()
-    
-    private let activityIndicator: UIActivityIndicatorView = {
-        let indicator = UIActivityIndicatorView(style: .large)
-        indicator.color = .white
-        return indicator
-    }()
-    
-    private lazy var progressView: UIProgressView = {
-        let progress = UIProgressView(progressViewStyle: .default)
-        progress.translatesAutoresizingMaskIntoConstraints = false
-        progress.isHidden = true
-        return progress
-    }()
-    
+    // MARK: - UI Element
+    private let homeView = HomeView()
+
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
-        setupTableView()
-        setupLoadingView()
-        setupProgressView()
         bindViewModel()
+        setupTableView()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        homeView.frame = view.bounds // Ensure the homeView takes the full size of the parent view
     }
 }
 
@@ -90,68 +60,10 @@ extension HomeViewController {
     }
     
     private func setupTableView() {
-        view.addSubview(tableView)
-        view.backgroundColor = DefaultValue.Colors.primaryColor
-        
-        tableView.delegate = self
-        tableView.dataSource = self
-        
-        tableView.register(MediaCell.self, forCellReuseIdentifier: MediaCell.reuseIdentifier)
-        
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.topAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-        ])
-    }
-    
-    private func setupLoadingView() {
-        view.addSubview(loadingView)
-        loadingView.addSubview(activityIndicator)
-        
-        loadingView.translatesAutoresizingMaskIntoConstraints = false
-        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            loadingView.topAnchor.constraint(equalTo: view.topAnchor),
-            loadingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            loadingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            loadingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            activityIndicator.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor)
-        ])
-    }
-    
-    private func setupProgressView() {
-        loadingView.addSubview(progressView)
-        
-        NSLayoutConstraint.activate([
-            progressView.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
-            progressView.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: 16),
-            progressView.widthAnchor.constraint(equalToConstant: 200)
-        ])
-    }
-    
-    private func showLoading(_ show: Bool) {
-        loadingView.isHidden = !show
-        if show {
-            activityIndicator.startAnimating()
-            view.isUserInteractionEnabled = false
-        } else {
-            activityIndicator.stopAnimating()
-            view.isUserInteractionEnabled = true
-        }
-    }
-    
-    private func showAlert(title: String, message: String) {
-        let alert = UIAlertController(title: title,
-                                      message: message,
-                                      preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+        view.addSubview(homeView)
+        homeView.tableView.delegate = self
+        homeView.tableView.dataSource = self
+        homeView.tableView.register(MediaCell.self, forCellReuseIdentifier: MediaCell.reuseIdentifier)
     }
     
     private func bindViewModel() {
@@ -161,24 +73,20 @@ extension HomeViewController {
             DispatchQueue.main.async {
                 switch state {
                 case .idle:
-                    self.showLoading(false)
-                    self.progressView.isHidden = true
+                    self.homeView.showLoading(false)
                     
                 case .loading(let progress):
-                    self.showLoading(true)
-                    self.progressView.isHidden = false
-                    self.progressView.progress = progress
+                    self.homeView.showLoading(true)
+                    self.homeView.progressView.isHidden = false
+                    self.homeView.progressView.progress = progress
                     
                 case .completed(let updated, let skipped):
-                    self.showLoading(false)
-                    self.progressView.isHidden = true
-                    self.tableView.reloadData()
-                    self.showAlert(title: "Success",
-                                   message: "Updated \(updated) items.\nSkipped \(skipped) duplicates.")
+                    self.homeView.showLoading(false)
+                    self.homeView.tableView.reloadData()
+                    self.showAlert(title: "Success", message: "Updated \(updated) items.\nSkipped \(skipped) duplicates.")
                     
                 case .error(let message):
-                    self.showLoading(false)
-                    self.progressView.isHidden = true
+                    self.homeView.showLoading(false)
                     self.showAlert(title: "Error", message: message)
                 }
             }
@@ -206,19 +114,16 @@ extension HomeViewController {
         } completion: { result in
             switch result {
             case .success(let completion):
-                self.loadingState = .completed(updated: completion.totalProcessed,
-                                               skipped: completion.totalSkipped)
+                self.loadingState = .completed(updated: completion.totalProcessed, skipped: completion.totalSkipped)
             case .failure(let error):
                 self.loadingState = .error(error.localizedDescription)
             }
         }
     }
-    
 }
 
 // MARK: - Table Setup
 extension HomeViewController: UITableViewDataSource {
-    // MARK: - UITableViewDataSource
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categories.count
@@ -236,8 +141,6 @@ extension HomeViewController: UITableViewDataSource {
 
 // MARK: - Table Interaction
 extension HomeViewController: UITableViewDelegate {
-    
-    // MARK: - UITableViewDelegate
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
@@ -262,7 +165,6 @@ extension HomeViewController: UITableViewDelegate {
 // MARK: - Action
 extension HomeViewController {
     
-    // MARK: - Side Menu Action
     @objc private func showSideMenu() {
         delegate?.didTapMenuButton()
     }
@@ -272,7 +174,7 @@ extension HomeViewController {
 extension HomeViewController: ListViewControllerDelegate {
     func listViewController(_ controller: ListViewController, didUpdateItemCount count: Int, forCategory category: CategoryType) {
         if let indexPath = categories.firstIndex(of: category).map({ IndexPath(row: $0, section: 0) }) {
-            if let cell = tableView.cellForRow(at: indexPath) as? MediaCell {
+            if let cell = homeView.tableView.cellForRow(at: indexPath) as? MediaCell {
                 cell.configure(with: category)
             }
         }
@@ -289,8 +191,7 @@ extension HomeViewController {
                 self.fetchAndSaveAllAssets()
             } else {
                 DispatchQueue.main.async {
-                    self.showAlert(title: "Error",
-                                   message: "Permission to access photo library is required")
+                    self.showAlert(title: "Error", message: "Permission to access photo library is required")
                 }
             }
         }
@@ -320,5 +221,15 @@ extension HomeViewController {
     }
 }
 
-
-
+// MARK: - Alert Method
+extension HomeViewController {
+    /// Displays an alert with a title and message.
+    /// - Parameters:
+    ///   - title: The title of the alert.
+    ///   - message: The message displayed in the alert.
+    func showAlert(title: String, message: String) {
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alertController, animated: true, completion: nil)
+    }
+}

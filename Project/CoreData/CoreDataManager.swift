@@ -1,21 +1,20 @@
-//
-//  CoreDataHandle.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 13/10/2024.
-//
-
 import CoreData
 import UIKit
 import Photos
 
+// MARK: - CoreDataManager
+/// A singleton class for managing Core Data operations related to the AppMedia entity.
+/// It provides methods for creating, reading, updating, and deleting media assets in Core Data.
 class CoreDataManager {
     
+    // MARK: - Singleton Instance
     static let shared = CoreDataManager()
     
     private init() {}
     
     // MARK: - Core Data Context
+    /// The managed object context for Core Data operations.
+    /// - Returns: The NSManagedObjectContext for the application.
     var context: NSManagedObjectContext {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             fatalError("AppDelegate not found")
@@ -24,6 +23,8 @@ class CoreDataManager {
     }
     
     // MARK: - Save Context
+    /// Saves changes in the context to the persistent store.
+    /// If there are no changes, the method does nothing.
     func saveContext() {
         if context.hasChanges {
             do {
@@ -36,6 +37,9 @@ class CoreDataManager {
     }
     
     // MARK: - AppMedia CRUD Operations
+    /// Creates a new AppMedia instance from a given PHAsset.
+    /// - Parameter asset: The PHAsset from which to create the AppMedia instance.
+    /// - Returns: The newly created AppMedia instance.
     func createAppMedia(from asset: PHAsset) -> AppMedia {
         let appMedia = AppMedia(context: context)
         appMedia.id = UUID()
@@ -61,6 +65,8 @@ class CoreDataManager {
         return appMedia
     }
     
+    /// Fetches all AppMedia instances from Core Data.
+    /// - Returns: An array of AppMedia objects.
     func fetchAllMedia() -> [AppMedia] {
         let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         
@@ -72,6 +78,9 @@ class CoreDataManager {
         }
     }
     
+    /// Fetches AppMedia instances filtered by media type.
+    /// - Parameter mediaType: The type of media to filter (e.g., "image" or "video").
+    /// - Returns: An array of AppMedia objects matching the specified media type.
     func fetchMedia(byType mediaType: String) -> [AppMedia] {
         let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         request.predicate = NSPredicate(format: "mediaType == %@", mediaType)
@@ -84,6 +93,9 @@ class CoreDataManager {
         }
     }
     
+    /// Fetches a single AppMedia instance by its unique identifier.
+    /// - Parameter id: The UUID of the AppMedia instance to fetch.
+    /// - Returns: An optional AppMedia object if found, otherwise nil.
     func fetchMedia(byId id: UUID) -> AppMedia? {
         let request: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
@@ -97,6 +109,11 @@ class CoreDataManager {
         }
     }
     
+    /// Updates the specified AppMedia instance with new values for title and/or thumbnail.
+    /// - Parameters:
+    ///   - appMedia: The AppMedia instance to update.
+    ///   - title: An optional new title for the media.
+    ///   - thumbnail: An optional new thumbnail data for the media.
     func updateAppMedia(appMedia: AppMedia, title: String? = nil, thumbnail: Data? = nil) {
         if let title = title {
             appMedia.title = title
@@ -108,12 +125,17 @@ class CoreDataManager {
         saveContext()
     }
     
+    /// Deletes the specified AppMedia instance from Core Data.
+    /// - Parameter appMedia: The AppMedia instance to delete.
     func deleteAppMedia(appMedia: AppMedia) {
         context.delete(appMedia)
         saveContext()
     }
     
     // MARK: - Count Operations
+    /// Fetches the count of AppMedia instances filtered by media type.
+    /// - Parameter mediaType: The type of media to count (e.g., "image" or "video").
+    /// - Returns: The count of AppMedia instances of the specified type.
     func fetchMediaCount(ofType mediaType: String) -> Int {
         let fetchRequest: NSFetchRequest<AppMedia> = AppMedia.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "mediaType == %@", mediaType)
@@ -127,6 +149,3 @@ class CoreDataManager {
         }
     }
 }
-
-
-

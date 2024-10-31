@@ -8,7 +8,9 @@
 import Foundation
 import UIKit
 
+/// A custom UICollectionViewCell subclass for displaying video thumbnails, titles, and durations.
 class VideoCell: UICollectionViewCell {
+    
     // MARK: - UI Components
     private let thumbnailImageView: UIImageView = {
         let imageView = UIImageView()
@@ -53,13 +55,17 @@ class VideoCell: UICollectionViewCell {
         return view
     }()
     
-    //MARK: - Initialization
+    // MARK: - Initialization
+    /// Initializes a new instance of `VideoCell`.
+    ///
+    /// This initializer sets the cell's background color and sets up its views.
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = DefaultValue.Colors.primaryColor
         setupViews()
     }
     
+    /// This initializer is not implemented, and attempting to use it will result in a fatal error.
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -70,7 +76,7 @@ extension VideoCell {
     
     // MARK: - Setup
 
-    
+    /// Sets up the UI components of the cell.
     private func setupViews() {
         backgroundColor = .clear
         
@@ -89,7 +95,6 @@ extension VideoCell {
         durationLabel.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            
             thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             thumbnailImageView.widthAnchor.constraint(equalToConstant: 80),
@@ -119,6 +124,7 @@ extension VideoCell {
     }
     
     // MARK: - Configuration
+    /// Configures the cell with video information from an `AppMedia` instance.
     func configure(with video: AppMedia) {
         if let thumbnail = video.thumbnail {
             thumbnailImageView.image = UIImage(data: thumbnail)
@@ -130,5 +136,5 @@ extension VideoCell {
         let seconds = duration % 60
         durationLabel.text = String(format: "%02d:%02d", minutes, seconds)
     }
-    
 }
+

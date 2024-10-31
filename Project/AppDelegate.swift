@@ -1,38 +1,48 @@
-//
-//  AppDelegate.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 13/10/2024.
-//
-
 import UIKit
 import CoreData
 
 @main
+/// The AppDelegate class serves as the main entry point for the application and manages application lifecycle events and Core Data setup.
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
+    // MARK: - Application Lifecycle
+
+    /// Called when the application has finished launching.
+    /// - Parameters:
+    ///   - application: The application instance.
+    ///   - launchOptions: A dictionary containing launch options.
+    /// - Returns: A Boolean value indicating whether the application launched successfully.
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-//        let navigationBarAppearance = UINavigationBar.appearance()
-//        navigationBarAppearance.tintColor = DefaultValue.Colors.accentColor
-//        navigationBarAppearance.backgroundColor = DefaultValue.Colors.sideMenuBackgroundColor
-//        navigationBarAppearance.titleTextAttributes = [NSAttributedString.Key.foregroundColor: DefaultValue.Colors.accentColor, NSAttributedString.Key.font: DefaultValue.Fonts.titleFont]
         return true
     }
     
+    /// The orientation lock setting for the application.
     var orientationLock: UIInterfaceOrientationMask = .all
     
+    /// Specifies the supported interface orientations for the application.
+    /// - Parameters:
+    ///   - application: The application instance.
+    ///   - window: The window that is being displayed.
+    /// - Returns: A bitmask that identifies the supported interface orientations for the window.
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
         return orientationLock
     }
 
-    // MARK: UISceneSession Lifecycle
+    // MARK: - UISceneSession Lifecycle
 
+    /// Called when a new scene session is being created.
+    /// - Parameters:
+    ///   - application: The application instance.
+    ///   - connectingSceneSession: The session that is being connected.
+    ///   - options: Options to configure the new scene session.
+    /// - Returns: A UISceneConfiguration object that defines the behavior of the new scene session.
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 
     // MARK: - Core Data stack
 
+    /// The persistent container for the application, encapsulating the Core Data stack.
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "Project")
         container.loadPersistentStores { (storeDescription, error) in
@@ -45,6 +55,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // MARK: - Core Data Saving support
 
+    /// Saves the context if there are any changes.
+    /// This method checks for unsaved changes and attempts to save them to the persistent store.
     func saveContext () {
         let context = persistentContainer.viewContext
         if context.hasChanges {

@@ -1,14 +1,11 @@
-//
-//  UINavigationViewControllerExtension.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 29/10/2024.
-//
-
 import Foundation
 import UIKit
 
+// MARK: - UINavigationController Extension
+/// An extension for `UINavigationController` that customizes the appearance of the navigation bar.
 extension UINavigationController {
+    
+    /// Configures the navigation bar's appearance when the view is loaded.
     override open func viewDidLoad() {
         super.viewDidLoad()
         
@@ -31,13 +28,14 @@ extension UINavigationController {
             navigationBar.compactScrollEdgeAppearance = appearance
         }
         
-        // Các thiết lập khác
+        // Configure additional navigation bar properties
         navigationBar.tintColor = DefaultValue.Colors.accentColor
         navigationBar.isTranslucent = false
         
-        // Điều chỉnh chiều cao bao gồm safe area
-        let window = UIApplication.shared.windows.first
-        let topPadding = window?.safeAreaInsets.top ?? 0
-        navigationBar.frame.size.height = 44 + topPadding
+        // Adjust the height of the navigation bar to include safe area insets
+        if let windowScene = view.window?.windowScene {
+            let topPadding = windowScene.statusBarManager?.statusBarFrame.height ?? 0
+            navigationBar.frame.size.height = 44 + topPadding
+        }
     }
 }
