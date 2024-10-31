@@ -539,82 +539,68 @@ class MediaPresentationController {
     }
     
     private func updateLayout(for orientation: UIDeviceOrientation) {
-        guard let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }),
-              let containerView = containerView,
+        guard let containerView = containerView,
               let mediaView = mediaView else { return }
-        
-        // Deactivate existing constraints
-        NSLayoutConstraint.deactivate(mediaViewConstraints)
-        mediaViewConstraints.removeAll()
-        
-        let newFrame: CGRect
-        
-        if orientation.isLandscape {
-            // In landscape, use the window's bounds but swap width and height if needed
-            let width = max(window.bounds.width, window.bounds.height)
-            let height = min(window.bounds.width, window.bounds.height)
-            newFrame = CGRect(x: 0, y: 0, width: width, height: height)
+
+        DispatchQueue.main.async {
+            // Deactivate any existing constraints
+            NSLayoutConstraint.deactivate(self.mediaViewConstraints)
+            self.mediaViewConstraints.removeAll()
             
-            // Set up landscape constraints
-            mediaViewConstraints = [
-                mediaView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-                mediaView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-                mediaView.widthAnchor.constraint(equalTo: containerView.widthAnchor),
-                mediaView.heightAnchor.constraint(equalTo: containerView.heightAnchor)
-            ]
-        } else {
-            // In portrait, use the window's bounds directly
-            newFrame = window.bounds
-            
-            // Set up portrait constraints
-            mediaViewConstraints = [
+            // Set mediaView to be full screen within containerView
+            self.mediaViewConstraints = [
                 mediaView.topAnchor.constraint(equalTo: containerView.topAnchor),
                 mediaView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
                 mediaView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
                 mediaView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
             ]
-        }
-        
-        UIView.animate(withDuration: 0.3) {
-            self.containerView?.frame = newFrame
-            self.overlayView?.frame = newFrame
             
-            // Activate new constraints
-            NSLayoutConstraint.activate(self.mediaViewConstraints)
-            self.containerView?.layoutIfNeeded()
+            UIView.animate(withDuration: 0.3) {
+                NSLayoutConstraint.activate(self.mediaViewConstraints)
+                containerView.layoutIfNeeded()
+            }
         }
     }
-    
+
     func present(mediaView: UIView) {
         guard let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) else { return }
         
         self.mediaView = mediaView
         
         // Create and setup overlay view
-        let overlay = UIView(frame: window.bounds)
+        let overlay = UIView()
         overlay.backgroundColor = .black
         overlay.alpha = 0
+        overlay.translatesAutoresizingMaskIntoConstraints = false
         window.addSubview(overlay)
         self.overlayView = overlay
         
         // Create and setup container view
-        let container = UIView(frame: window.bounds)
+        let container = UIView()
         container.backgroundColor = .clear
+        container.translatesAutoresizingMaskIntoConstraints = false
         window.addSubview(container)
         self.containerView = container
         
-        // Setup safe area handling
-        if #available(iOS 11.0, *) {
-            container.insetsLayoutMarginsFromSafeArea = false
-            mediaView.insetsLayoutMarginsFromSafeArea = false
-        }
+        // Pin overlay and container to the window’s bounds
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: window.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: window.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: window.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: window.bottomAnchor),
+            
+            container.topAnchor.constraint(equalTo: window.topAnchor),
+            container.leadingAnchor.constraint(equalTo: window.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: window.trailingAnchor),
+            container.bottomAnchor.constraint(equalTo: window.bottomAnchor)
+        ])
         
-        // Add media view to container
+        // Add mediaView to container and make it full screen
         mediaView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(mediaView)
         mediaView.alpha = 0
-        
-        // Initial constraints setup
+
+        // Set mediaView to fill the containerView
         mediaViewConstraints = [
             mediaView.topAnchor.constraint(equalTo: container.topAnchor),
             mediaView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
@@ -623,18 +609,16 @@ class MediaPresentationController {
         ]
         NSLayoutConstraint.activate(mediaViewConstraints)
         
-        // Animate presentation
+        // Animate the presentation
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 0.5
             mediaView.alpha = 1
         }
         
-        // Ensure window is above status bar
+        // Set window level
         window.windowLevel = .statusBar + 1
-        
-        // Update layout for current orientation
-        updateLayout(for: UIDevice.current.orientation)
     }
+
     
     func dismiss(completion: (() -> Void)? = nil) {
         UIView.animate(withDuration: 0.3, animations: {

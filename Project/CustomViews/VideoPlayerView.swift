@@ -21,6 +21,7 @@ class VideoPlayerView: UIView {
     private var playerItem: AVPlayerItem?
     private var itemObserver: NSKeyValueObservation?
     private var locked = false
+    private var isFlipped = false
     
     // MARK: - UI Components
     private lazy var playerLayer: AVPlayerLayer = {
@@ -44,9 +45,9 @@ class VideoPlayerView: UIView {
         return button
     }()
     
-    private lazy var customTopRightButton: UIButton = {
+    private lazy var captureButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        button.setImage(UIImage(systemName: "camera.viewfinder"), for: .normal)
         button.tintColor = .white
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -99,7 +100,7 @@ class VideoPlayerView: UIView {
     }()
     
     private lazy var lockButton: UIButton = createButton(systemName: locked ? "lock.fill" : "lock.open.fill")
-    private lazy var rightButton: UIButton = createButton(systemName: "button.programmable")
+    private lazy var flipButton: UIButton = createButton(systemName: "rectangle.landscape.rotate")
     
     private lazy var previousButton: UIButton = createButton(systemName: "backward.end.fill")
     private lazy var backwardButton: UIButton = createButton(systemName: "backward.10")
@@ -141,24 +142,24 @@ class VideoPlayerView: UIView {
 // MARK: - UI Setup
 extension VideoPlayerView {
     private func setupUI() {
-            layer.addSublayer(playerLayer)
-            addSubview(controlsContainerView)
-            setupControlsContainer()
-            setupControls()
-        }
+        layer.addSublayer(playerLayer)
+        addSubview(controlsContainerView)
+        setupControlsContainer()
+        setupControls()
+    }
     
     private func setupControlsContainer() {
-            NSLayoutConstraint.activate([
-                controlsContainerView.topAnchor.constraint(equalTo: topAnchor),
-                controlsContainerView.leadingAnchor.constraint(equalTo: leadingAnchor),
-                controlsContainerView.trailingAnchor.constraint(equalTo: trailingAnchor),
-                controlsContainerView.bottomAnchor.constraint(equalTo: bottomAnchor)
-            ])
-        }
+        NSLayoutConstraint.activate([
+            controlsContainerView.topAnchor.constraint(equalTo: topAnchor),
+            controlsContainerView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            controlsContainerView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            controlsContainerView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
     
     private func setupControls() {
         controlsContainerView.addSubview(backButton)
-        controlsContainerView.addSubview(customTopRightButton)
+        controlsContainerView.addSubview(captureButton)
         controlsContainerView.addSubview(videoSlider)
         controlsContainerView.addSubview(currentTimeLabel)
         controlsContainerView.addSubview(totalTimeLabel)
@@ -180,37 +181,37 @@ extension VideoPlayerView {
         
         controlsStackView.addArrangedSubview(leftButtonsStackView)
         controlsStackView.addArrangedSubview(centerButtonsStackView)
-        controlsStackView.addArrangedSubview(rightButton)
+        controlsStackView.addArrangedSubview(flipButton)
     }
     
     private func setupControlsConstraints() {
-            NSLayoutConstraint.activate([
-                backButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-                backButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-                backButton.widthAnchor.constraint(equalToConstant: 44),
-                backButton.heightAnchor.constraint(equalToConstant: 44),
-                
-                customTopRightButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-                customTopRightButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-                customTopRightButton.widthAnchor.constraint(equalToConstant: 44),
-                customTopRightButton.heightAnchor.constraint(equalToConstant: 44),
-                
-                currentTimeLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-                currentTimeLabel.bottomAnchor.constraint(equalTo: controlsStackView.topAnchor, constant: -8),
-                
-                videoSlider.leadingAnchor.constraint(equalTo: currentTimeLabel.trailingAnchor, constant: 16),
-                videoSlider.centerYAnchor.constraint(equalTo: currentTimeLabel.centerYAnchor),
-                videoSlider.trailingAnchor.constraint(equalTo: totalTimeLabel.leadingAnchor, constant: -16),
-                
-                totalTimeLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-                totalTimeLabel.bottomAnchor.constraint(equalTo: controlsStackView.topAnchor, constant: -8),
-                
-                controlsStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-                controlsStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-                controlsStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -16),
-                controlsStackView.heightAnchor.constraint(equalToConstant: 44)
-            ])
-        }
+        NSLayoutConstraint.activate([
+            backButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+            backButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            backButton.widthAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            captureButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+            captureButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            captureButton.widthAnchor.constraint(equalToConstant: 44),
+            captureButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            currentTimeLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            currentTimeLabel.bottomAnchor.constraint(equalTo: controlsStackView.topAnchor, constant: -8),
+            
+            videoSlider.leadingAnchor.constraint(equalTo: currentTimeLabel.trailingAnchor, constant: 16),
+            videoSlider.centerYAnchor.constraint(equalTo: currentTimeLabel.centerYAnchor),
+            videoSlider.trailingAnchor.constraint(equalTo: totalTimeLabel.leadingAnchor, constant: -16),
+            
+            totalTimeLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            totalTimeLabel.bottomAnchor.constraint(equalTo: controlsStackView.topAnchor, constant: -8),
+            
+            controlsStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            controlsStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            controlsStackView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            controlsStackView.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
     
     private func setupActions() {
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
@@ -219,6 +220,8 @@ extension VideoPlayerView {
         forwardButton.addTarget(self, action: #selector(forwardButtonTapped), for: .touchUpInside)
         videoSlider.addTarget(self, action: #selector(sliderValueChanged), for: .valueChanged)
         lockButton.addTarget(self, action: #selector(lockButtonTapped), for: .touchUpInside)
+        flipButton.addTarget(self, action: #selector(flipButtonTapped), for: .touchUpInside)
+        captureButton.addTarget(self, action: #selector(captureButtonTapped), for: .touchUpInside)
     }
 }
 
@@ -425,7 +428,7 @@ extension VideoPlayerView {
             self?.resetPlayback()
         }
     }
-
+    
     @objc private func handleEnterBackground() {
         player?.pause()
         playPauseButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
@@ -487,5 +490,125 @@ extension VideoPlayerView {
     
     @objc private func lockButtonTapped() {
         locked.toggle()
+        let lockImage = UIImage(systemName: locked ? "lock.fill" : "lock.open.fill")
+        lockButton.setImage(lockImage, for: .normal)
+        let currentOrientation = UIDevice.current.orientation
+        
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            if locked {
+                // Lock the current orientation
+                switch currentOrientation {
+                case .portrait:
+                    appDelegate.orientationLock = .portrait
+                case .landscapeLeft:
+                    appDelegate.orientationLock = .landscapeRight
+                case .landscapeRight:
+                    appDelegate.orientationLock = .landscapeLeft
+                case .portraitUpsideDown:
+                    appDelegate.orientationLock = .portraitUpsideDown
+                default:
+                    break
+                }
+            } else {
+                appDelegate.orientationLock = .all
+            }
+            
+            // Force update of the device orientation
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+    }
+    
+    @objc private func flipButtonTapped() {
+        isFlipped.toggle()
+        let flipTransform = CATransform3DMakeRotation(isFlipped ? .pi : 0, 0, 1, 0)
+        playerLayer.transform = flipTransform
+    }
+    
+    @objc private func captureButtonTapped() {
+        guard let player = player else { return }
+        
+        // Tạo một UIImage từ frame hiện tại của video
+        let imageGenerator = AVAssetImageGenerator(asset: player.currentItem?.asset ?? AVAsset())
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        // Lấy thời điểm hiện tại của video
+        let time = CMTime(seconds: player.currentTime().seconds, preferredTimescale: 600)
+        
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
+            let image = UIImage(cgImage: cgImage)
+            
+            // Lưu ảnh vào Photos Library
+            PHPhotoLibrary.requestAuthorization { status in
+                guard status == .authorized else {
+                    // Xử lý khi không có quyền truy cập Photos
+                    DispatchQueue.main.async {
+                        self.showPermissionAlert()
+                    }
+                    return
+                }
+                
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                }) { success, error in
+                    DispatchQueue.main.async {
+                        if success {
+                            // Thông báo lưu thành công
+                            self.showSuccessMessage()
+                        } else {
+                            // Xử lý lỗi
+                            print("Error saving photo: \(String(describing: error))")
+                            self.showErrorMessage()
+                        }
+                    }
+                }
+            }
+        } catch {
+            print("Error generating image: \(error)")
+            showErrorMessage()
+        }
+    }
+
+    // Helper methods để hiển thị thông báo
+    private func showSuccessMessage() {
+        // Bạn có thể thay thế bằng UI tùy chỉnh của mình
+        let alert = UIAlertController(
+            title: "Success",
+            message: "Image saved to Photos",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        if let viewController = self.window?.rootViewController {
+            viewController.present(alert, animated: true)
+        }
+    }
+
+    private func showErrorMessage() {
+        let alert = UIAlertController(
+            title: "Error",
+            message: "Failed to save image",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        if let viewController = self.window?.rootViewController {
+            viewController.present(alert, animated: true)
+        }
+    }
+
+    private func showPermissionAlert() {
+        let alert = UIAlertController(
+            title: "Permission Required",
+            message: "Please allow access to Photos in Settings to save images",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Settings", style: .default) { _ in
+            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsUrl)
+            }
+        })
+        if let viewController = self.window?.rootViewController {
+            viewController.present(alert, animated: true)
+        }
     }
 }

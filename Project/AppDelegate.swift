@@ -18,6 +18,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //        navigationBarAppearance.titleTextAttributes = [NSAttributedString.Key.foregroundColor: DefaultValue.Colors.accentColor, NSAttributedString.Key.font: DefaultValue.Fonts.titleFont]
         return true
     }
+    
+    var orientationLock: UIInterfaceOrientationMask = .all
+    
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return orientationLock
+    }
 
     // MARK: UISceneSession Lifecycle
 
