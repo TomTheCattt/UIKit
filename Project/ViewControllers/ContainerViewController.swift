@@ -123,7 +123,6 @@ extension ContainerViewController {
         sideMenuController.view.frame = CGRect(x: -menuWidth, y: 0, width: menuWidth, height: view.bounds.height)
         addChild(sideMenuController)
         view.addSubview(sideMenuController.view)
-        sideMenuController.view.translatesAutoresizingMaskIntoConstraints = false
         sideMenuController.didMove(toParent: self)
     }
     
