@@ -32,6 +32,10 @@ class HomeViewController: UIViewController {
         setupNavigationBar()
         bindViewModel()
         setupTableView()
+//        let coreData = CoreDataManager.shared
+//        coreData.printCount()
+//        coreData.printAllAppMedia()
+        //coreData.deleteAllAppMedia()
     }
     
     override func viewDidLayoutSubviews() {
