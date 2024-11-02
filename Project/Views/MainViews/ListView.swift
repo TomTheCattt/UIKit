@@ -2,7 +2,7 @@ import UIKit
 
 /// A custom view that displays a collection of items, handles no data situations,
 /// shows loading indicators, and includes a bottom bar with a delete button.
-class ListView: UIView {
+final class ListView: UIView {
     // MARK: - UI Components
     /// The collection view used to display items.
     private(set) var collectionView: UICollectionView!

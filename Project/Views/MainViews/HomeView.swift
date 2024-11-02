@@ -1,7 +1,7 @@
 import UIKit
 
 /// A custom UIView that represents the layout and appearance of the home view.
-class HomeView: UIView {
+final class HomeView: UIView {
 
     // MARK: - UI Element(s)
     let tableView: UITableView = {

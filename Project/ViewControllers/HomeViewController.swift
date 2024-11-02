@@ -3,50 +3,57 @@ import CoreData
 import Photos
 
 // MARK: - HomeViewController
+/// `HomeViewController` manages the home screen of the application, allowing users to view and interact with media categories (images and videos).
 class HomeViewController: UIViewController {
+    
     // MARK: - Properties
+    /// A delegate conforming to `HomeViewControllerDelegate` for handling menu actions.
     weak var delegate: HomeViewControllerDelegate?
     
+    /// An array of `CategoryType` representing the types of media available (images and videos).
     private let categories = [CategoryType.image, CategoryType.video]
     
+    /// A `DataManager` instance for handling media data operations.
     private lazy var dataManager: DataManager = {
         DispatchQueue.main.sync {
             return DataManager(context: CoreDataManager.shared.context, mediaType: nil)
         }
     }()
     
+    /// A state variable indicating the current loading state of the view (idle, loading, completed, error).
     var loadingState: LoadingState = .idle {
         didSet {
             loadingStateDidChange?(loadingState)
         }
     }
     
+    /// A closure that gets called when the loading state changes, allowing UI updates.
     var loadingStateDidChange: ((LoadingState) -> Void)?
     
     // MARK: - UI Element
+    /// The main view for the home screen, containing UI elements for displaying media categories.
     private let homeView = HomeView()
 
     // MARK: - Lifecycle
+    /// Called after the view has been loaded into memory. Sets up the navigation bar, binds the view model, and initializes the table view.
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
         bindViewModel()
         setupTableView()
-//        let coreData = CoreDataManager.shared
-//        coreData.printCount()
-//        coreData.printAllAppMedia()
-        //coreData.deleteAllAppMedia()
     }
     
+    /// Called when the view's layout has changed. Adjusts the frame of `homeView` to match the view's bounds.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        homeView.frame = view.bounds // Ensure the homeView takes the full size of the parent view
+        homeView.frame = view.bounds
     }
 }
 
 // MARK: - UI Setup
 extension HomeViewController {
     
+    /// Configures the navigation bar with buttons for the side menu and refresh action.
     private func setupNavigationBar() {
         title = DefaultValue.String.homeViewTitle.uppercased()
         
@@ -63,6 +70,7 @@ extension HomeViewController {
         navigationItem.rightBarButtonItem = refreshButton
     }
     
+    /// Initializes the table view to display media categories.
     private func setupTableView() {
         view.addSubview(homeView)
         homeView.tableView.delegate = self
@@ -70,6 +78,7 @@ extension HomeViewController {
         homeView.tableView.register(MediaCell.self, forCellReuseIdentifier: MediaCell.reuseIdentifier)
     }
     
+    /// Binds the loading state changes to update the UI accordingly.
     private func bindViewModel() {
         loadingStateDidChange = { [weak self] state in
             guard let self = self else { return }
@@ -97,6 +106,7 @@ extension HomeViewController {
         }
     }
     
+    /// Fetches assets from the photo library and saves them using the data manager.
     private func fetchAndSaveAllAssets() {
         loadingState = .loading(progress: 0)
         
@@ -129,10 +139,20 @@ extension HomeViewController {
 // MARK: - Table Setup
 extension HomeViewController: UITableViewDataSource {
     
+    /// Returns the number of rows in the table view.
+    /// - Parameters:
+    ///   - tableView: The table view requesting this information.
+    ///   - section: The index of the section.
+    /// - Returns: The number of rows in the section.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categories.count
     }
     
+    /// Configures and returns the cell for a given row in the table view.
+    /// - Parameters:
+    ///   - tableView: The table view requesting the cell.
+    ///   - indexPath: The index path of the cell.
+    /// - Returns: The configured `MediaCell`.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: MediaCell.reuseIdentifier, for: indexPath) as? MediaCell else {
             return UITableViewCell()
@@ -146,6 +166,10 @@ extension HomeViewController: UITableViewDataSource {
 // MARK: - Table Interaction
 extension HomeViewController: UITableViewDelegate {
     
+    /// Handles the selection of a row in the table view.
+    /// - Parameters:
+    ///   - tableView: The table view containing the selected row.
+    ///   - indexPath: The index path of the selected row.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
@@ -161,6 +185,11 @@ extension HomeViewController: UITableViewDelegate {
         navigationController?.pushViewController(listViewController, animated: true)
     }
     
+    /// Returns the height of a row in the table view.
+    /// - Parameters:
+    ///   - tableView: The table view requesting this information.
+    ///   - indexPath: The index path of the row.
+    /// - Returns: The height of the row.
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 100
     }
@@ -169,6 +198,7 @@ extension HomeViewController: UITableViewDelegate {
 // MARK: - Action
 extension HomeViewController {
     
+    /// Displays the side menu when the side menu button is tapped.
     @objc private func showSideMenu() {
         delegate?.didTapMenuButton()
     }
@@ -176,6 +206,12 @@ extension HomeViewController {
 
 // MARK: - Delegate
 extension HomeViewController: ListViewControllerDelegate {
+    
+    /// Updates the item count in the table view when changes are made in the `ListViewController`.
+    /// - Parameters:
+    ///   - controller: The `ListViewController` instance.
+    ///   - count: The updated item count.
+    ///   - category: The category for which the count has been updated.
     func listViewController(_ controller: ListViewController, didUpdateItemCount count: Int, forCategory category: CategoryType) {
         if let indexPath = categories.firstIndex(of: category).map({ IndexPath(row: $0, section: 0) }) {
             if let cell = homeView.tableView.cellForRow(at: indexPath) as? MediaCell {
@@ -187,6 +223,8 @@ extension HomeViewController: ListViewControllerDelegate {
 
 // MARK: - Data Methods
 extension HomeViewController {
+    
+    /// Refreshes all data by requesting access to the photo library and fetching assets.
     @objc private func refreshAllData() {
         requestPhotoLibraryAccess { [weak self] granted in
             guard let self = self else { return }
@@ -200,24 +238,13 @@ extension HomeViewController {
             }
         }
     }
-    
-    private func fetchCoreDataItems() {
-        dataManager.fetchData { result in
-            switch result {
-            case .success(let items):
-                print("Fetched items:")
-                items.forEach { item in
-                    print(item)  // Customize this print as needed for specific attributes
-                }
-            case .failure(let error):
-                print("Failed to fetch items: \(error.localizedDescription)")
-            }
-        }
-    }
 }
 
 // MARK: - Photos Library Permission
 extension HomeViewController {
+    
+    /// Requests access to the photo library and returns the result through the completion handler.
+    /// - Parameter completion: A closure that returns a Boolean indicating whether access was granted.
     private func requestPhotoLibraryAccess(completion: @escaping (Bool) -> Void) {
         PHPhotoLibrary.requestAuthorization { status in
             completion(status == .authorized)
@@ -227,6 +254,7 @@ extension HomeViewController {
 
 // MARK: - Alert Method
 extension HomeViewController {
+    
     /// Displays an alert with a title and message.
     /// - Parameters:
     ///   - title: The title of the alert.
@@ -237,3 +265,4 @@ extension HomeViewController {
         present(alertController, animated: true, completion: nil)
     }
 }
+

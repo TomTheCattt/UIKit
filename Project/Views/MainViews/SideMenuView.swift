@@ -1,7 +1,7 @@
 import UIKit
 
 /// A custom UIView that represents the layout and appearance of the side menu.
-class SideMenuView: UIView {
+final class SideMenuView: UIView {
     
     // MARK: - UI Elements
     private lazy var containerView: UIView = {

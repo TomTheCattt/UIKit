@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 /// A view controller that manages a side menu and a home view controller.
-class ContainerViewController: UIViewController {
+final class ContainerViewController: UIViewController {
     
     // MARK: - Properties
     

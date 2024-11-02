@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 /// A custom UICollectionViewCell subclass for displaying an image thumbnail with an optional dimming overlay.
-class ImageCell: UICollectionViewCell {
+final class ImageCell: UICollectionViewCell {
     
     // MARK: - UI Components
     private let thumbnailImageView = UIImageView()
@@ -28,9 +28,13 @@ class ImageCell: UICollectionViewCell {
 }
 
 // MARK: - Setup And Configure
+/// This extension provides setup and configuration methods for the `ImageCell`.
 extension ImageCell {
+    
     // MARK: - Setup
     /// Sets up the UI components of the cell.
+    /// This method configures the appearance and layout of the cell's subviews,
+    /// including the thumbnail image view and the dim view.
     private func setupViews() {
         thumbnailImageView.contentMode = .scaleAspectFill
         thumbnailImageView.clipsToBounds = true
@@ -47,6 +51,8 @@ extension ImageCell {
     /// Configures the cell with an image represented by `AppMedia`.
     ///
     /// - Parameter appImage: An instance of `AppMedia` containing the image data.
+    /// This method sets the image view's image based on the provided `AppMedia`
+    /// instance, either from the thumbnail data or by loading from a local file.
     func configure(with appImage: AppMedia) {
         if let thumbnailData = appImage.thumbnail,
            let thumbnail = UIImage(data: thumbnailData) {
@@ -61,3 +67,4 @@ extension ImageCell {
         }
     }
 }
+

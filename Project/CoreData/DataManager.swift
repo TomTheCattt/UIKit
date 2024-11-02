@@ -4,29 +4,50 @@ import Photos
 import AVFoundation
 
 // MARK: - DataManager
+/// `DataManager` is responsible for handling media data operations, including fetching, saving, and caching images.
 final class DataManager {
+    
     // MARK: - Properties
+    /// The managed object context for Core Data operations.
     private let context: NSManagedObjectContext
+    
+    /// The type of media to be processed, if applicable.
     private let mediaType: String?
+    
+    /// Cache for storing images to optimize performance and reduce memory usage.
     private let imageCache = NSCache<NSString, UIImage>()
+    
+    /// Type alias for the completion handler used in batch save operations.
     typealias BatchSaveCompletion = (totalProcessed: Int, totalSkipped: Int)
     
-    // Increased thumbnail size and quality
+    /// The size for thumbnail images.
     private let thumbnailSize = CGSize(width: 400, height: 400)
+    
+    /// The quality factor for thumbnail image compression (0.0 to 1.0).
     private let thumbnailCompressionQuality: CGFloat = 0.8
     
     // MARK: - Initialization
+    /// Initializes a new instance of `DataManager`.
+    /// - Parameters:
+    ///   - context: The managed object context for Core Data operations.
+    ///   - mediaType: The type of media to be processed (optional).
     init(context: NSManagedObjectContext, mediaType: String?) {
         self.context = context
         self.mediaType = mediaType
         
+        // Configure the image cache limits.
         imageCache.countLimit = 100
         imageCache.totalCostLimit = 50 * 1024 * 1024 // 50MB limit
     }
 }
 
+
 // MARK: - Data Fetching
+/// This extension provides methods for fetching media data from Core Data.
 extension DataManager {
+    
+    /// Fetches media data from the Core Data context.
+    /// - Parameter completion: A closure to call upon completion with the result of the fetch operation.
     func fetchData(completion: @escaping (Result<[NSManagedObject], Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -56,8 +77,16 @@ extension DataManager {
     }
 }
 
+
 // MARK: - Media Saving
+/// This extension provides methods for saving media assets from the photo library to the Core Data context.
 extension DataManager {
+    
+    /// Saves a single media asset from the photo library to the Core Data context.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` to save.
+    ///   - context: The managed object context in which to save the asset.
+    ///   - completion: A closure to call upon completion with the result of the operation.
     func saveMediaFromAsset(_ asset: PHAsset, in context: NSManagedObjectContext,
                            completion: @escaping (Result<String, Error>) -> Void) {
         autoreleasepool {
@@ -103,6 +132,10 @@ extension DataManager {
         }
     }
     
+    /// Configures the properties of the `AppMedia` object based on the provided `PHAsset`.
+    /// - Parameters:
+    ///   - media: The `AppMedia` object to configure.
+    ///   - asset: The `PHAsset` from which to extract properties.
     private func configureMediaProperties(media: AppMedia, from asset: PHAsset) {
         media.id = UUID()
         media.createdAt = asset.creationDate
@@ -112,9 +145,14 @@ extension DataManager {
         media.duration = asset.mediaType == .video ? asset.duration : 0
     }
     
+    /// Generates a thumbnail for an image asset and saves it to the provided `AppMedia` object.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` representing the image.
+    ///   - media: The `AppMedia` object to store the thumbnail.
+    ///   - completion: A closure to call upon completion with the result of the thumbnail generation.
     private func generateImageThumbnail(for asset: PHAsset, media: AppMedia,
                                       completion: @escaping (Result<String, Error>) -> Void) {
-        // Check cache first
+        
         if let cachedImage = imageCache.object(forKey: asset.localIdentifier as NSString),
            let thumbnailData = cachedImage.jpegData(compressionQuality: thumbnailCompressionQuality) {
             media.thumbnail = thumbnailData
@@ -122,18 +160,17 @@ extension DataManager {
             return
         }
         
-        // Configure options for better quality
         let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat  // Changed to high quality
+        options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
         options.isSynchronous = false
-        options.isNetworkAccessAllowed = true      // Allow fetching from iCloud
-        options.version = .current                 // Get the latest version
+        options.isNetworkAccessAllowed = true
+        options.version = .current
         
         PHImageManager.default().requestImage(
             for: asset,
             targetSize: thumbnailSize,
-            contentMode: .aspectFill,              // Changed to aspectFill for better scaling
+            contentMode: .aspectFill,
             options: options
         ) { [weak self] image, info in
             guard let self = self,
@@ -150,13 +187,17 @@ extension DataManager {
         }
     }
     
+    /// Generates a thumbnail for a video asset and saves it to the provided `AppMedia` object.
+    /// - Parameters:
+    ///   - asset: The `PHAsset` representing the video.
+    ///   - media: The `AppMedia` object to store the thumbnail.
+    ///   - completion: A closure to call upon completion with the result of the thumbnail generation.
     private func generateVideoThumbnail(for asset: PHAsset, media: AppMedia,
                                       completion: @escaping (Result<String, Error>) -> Void) {
-        // Configure video options for better quality
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat  // Changed to high quality
-        options.version = .current                 // Get the latest version
+        options.deliveryMode = .highQualityFormat
+        options.version = .current
         
         PHImageManager.default().requestAVAsset(
             forVideo: asset,
@@ -186,11 +227,14 @@ extension DataManager {
         }
     }
     
+    /// Generates a thumbnail image for a video asset.
+    /// - Parameter video: The `AVAsset` representing the video.
+    /// - Returns: A `UIImage` representing the generated thumbnail, or `nil` if generation failed.
     private func generateThumbnail(for video: AVAsset) -> UIImage? {
         let generator = AVAssetImageGenerator(asset: video)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = thumbnailSize
-        generator.apertureMode = .encodedPixels    // Added for better quality
+        generator.apertureMode = .encodedPixels
         
         let duration = video.duration
         let midPoint = CMTimeMultiplyByFloat64(duration, multiplier: 0.5)
@@ -203,6 +247,8 @@ extension DataManager {
         }
     }
     
+    /// Saves the current context, completing the media save operation.
+    /// - Parameter completion: A closure to call upon completion with the result of the save operation.
     private func saveMediaContext(completion: @escaping (Result<String, Error>) -> Void) {
         do {
             try context.save()
@@ -212,6 +258,12 @@ extension DataManager {
         }
     }
     
+    /// Saves multiple media assets from the photo library to the Core Data context in batches.
+    /// - Parameters:
+    ///   - assets: An array of `PHAsset` objects to save.
+    ///   - batchSize: The number of assets to process in each batch (default is 20).
+    ///   - progressHandler: A closure to report progress of the save operation.
+    ///   - completion: A closure to call upon completion with the result of the batch save operation.
     func saveMediaFromAssets(_ assets: [PHAsset],
                            batchSize: Int = 20,
                            progressHandler: @escaping (Int, Int) -> Void,
@@ -278,8 +330,16 @@ extension DataManager {
     }
 }
 
+
 // MARK: - Asset Management & Utilities
+/// This extension provides utility functions for managing media assets and their associated cache.
 extension DataManager {
+    
+    /// Checks if an asset with the given identifier exists in the specified context.
+    /// - Parameters:
+    ///   - identifier: The unique identifier of the asset to check.
+    ///   - context: The managed object context to search within.
+    /// - Returns: A Boolean value indicating whether the asset exists.
     private func isAssetExists(_ identifier: String, in context: NSManagedObjectContext) -> Bool {
         let fetchRequest = NSFetchRequest<NSNumber>(entityName: "AppMedia")
         fetchRequest.resultType = .countResultType
@@ -293,10 +353,15 @@ extension DataManager {
         }
     }
     
+    /// Clears all objects from the image cache to free up memory.
     func clearCache() {
         imageCache.removeAllObjects()
     }
     
+    /// Deletes specified managed objects from the context and removes their associated cache entries.
+    /// - Parameters:
+    ///   - items: An array of `NSManagedObject` items to be deleted.
+    ///   - completion: A closure to call upon completion with the result of the operation.
     func deleteItems(_ items: [NSManagedObject], completion: @escaping (Result<Void, Error>) -> Void) {
         context.perform { [weak self] in
             guard let self = self else { return }
@@ -317,3 +382,4 @@ extension DataManager {
         }
     }
 }
+

@@ -64,11 +64,16 @@ final class MediaCell: UITableViewCell {
     }
 }
 
+
 // MARK: - Setup And Configure
+/// This extension contains methods for setting up and configuring the `MediaCell`.
 extension MediaCell {
     
     // MARK: - UI Setup
     /// Sets up the user interface components of the cell.
+    ///
+    /// This method adds the album icon view, title label, count label, and arrow image view to the cell's content view.
+    /// It also establishes the necessary Auto Layout constraints for proper layout.
     private func setupUI() {
         [albumIconView, titleLabel, countLabel, arrowImageView].forEach {
             contentView.addSubview($0)
@@ -105,6 +110,11 @@ extension MediaCell {
     /// - Parameter category: An instance of `CategoryType` containing information about the media category,
     /// including the title and media type. This method fetches the count of items in the category and
     /// updates the UI components accordingly.
+    ///
+    /// This method initializes the `DataManager` with the appropriate context and media type. It fetches
+    /// the data asynchronously and updates the cell's UI based on the result. If the fetch is successful,
+    /// it updates the count label and the album icon view with layered thumbnails. If the fetch fails,
+    /// it shows a placeholder image and updates the count label to "0 items".
     func configure(with category: CategoryType) {
         titleLabel.text = category.title
         
@@ -153,7 +163,9 @@ extension MediaCell {
     }
 }
 
+
 // MARK: - Helper Methods
+/// This extension contains helper methods for the `MediaCell`.
 extension MediaCell {
     
     /// Creates a layered thumbnail image from an array of images.
@@ -201,6 +213,8 @@ extension MediaCell {
     }
     
     /// Prepares the cell for reuse by resetting its properties.
+    /// This method clears the album icon, title label, and count label,
+    /// ensuring that the cell displays the correct data when reused.
     override func prepareForReuse() {
         super.prepareForReuse()
         albumIconView.image = nil
@@ -209,6 +223,8 @@ extension MediaCell {
     }
     
     /// Layout adjustments for the cell.
+    /// This method is called when the layout of the cell needs to be updated.
+    /// It ensures that the album icon view has smooth corners.
     override func layoutSubviews() {
         super.layoutSubviews()
         
@@ -217,3 +233,4 @@ extension MediaCell {
         albumIconView.layer.masksToBounds = true
     }
 }
+

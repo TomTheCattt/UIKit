@@ -75,8 +75,9 @@ extension UIColor {
     }
 }
 
+// MARK: - UIFont Extension for bold style
 extension UIFont {
     func bold() -> UIFont {
-            return UIFont(descriptor: self.fontDescriptor.withSymbolicTraits(.traitBold) ?? self.fontDescriptor, size: 0)
-        }
+        return UIFont(descriptor: self.fontDescriptor.withSymbolicTraits(.traitBold) ?? self.fontDescriptor, size: 0)
+    }
 }

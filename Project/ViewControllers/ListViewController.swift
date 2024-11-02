@@ -6,7 +6,7 @@ import Photos
 /// `ListViewController` handles the display and management of media items,
 /// such as images and videos, with functionality for selection, deletion, and
 /// toggling between selection and presentation modes.
-class ListViewController: UIViewController {
+final class ListViewController: UIViewController {
     
     // MARK: - Properties
     

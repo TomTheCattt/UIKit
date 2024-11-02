@@ -1,7 +1,7 @@
 import UIKit
 
 /// A view controller that manages the side menu interface and its interactions.
-class SideMenuController: UIViewController {
+final class SideMenuController: UIViewController {
     
     // MARK: - Properties
     /// A delegate that communicates user interactions with the side menu.

@@ -3,7 +3,7 @@ import UIKit
 
 // MARK: - MediaPresentationController
 /// A controller responsible for presenting media views modally with a customizable overlay and layout adjustments for device orientation changes.
-class MediaPresentationController {
+final class MediaPresentationController {
     private weak var parentViewController: UIViewController?
     private var containerView: UIView?
     private var overlayView: UIView?

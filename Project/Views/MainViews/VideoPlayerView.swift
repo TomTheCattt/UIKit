@@ -4,7 +4,7 @@ import Photos
 
 // MARK: - VideoDetailViewController
 /// A custom view for displaying and controlling video playback.
-class VideoPlayerView: UIView {
+final class VideoPlayerView: UIView {
     
     // MARK: - Properties
     /// The video player responsible for playback.
@@ -756,6 +756,8 @@ extension VideoPlayerView {
     }
 }
 
+
+// MARK: - Video Player Handlers
 extension VideoPlayerView: UIApplicationDelegate {
     func applicationDidEnterBackground(_ application: UIApplication) {
         player?.pause()

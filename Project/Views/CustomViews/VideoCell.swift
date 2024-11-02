@@ -1,15 +1,8 @@
-//
-//  VideoCell.swift
-//  Project
-//
-//  Created by Việt Anh Nguyễn on 14/10/2024.
-//
-
 import Foundation
 import UIKit
 
 /// A custom UICollectionViewCell subclass for displaying video thumbnails, titles, and durations.
-class VideoCell: UICollectionViewCell {
+final class VideoCell: UICollectionViewCell {
     
     // MARK: - UI Components
     private let thumbnailImageView: UIImageView = {
@@ -71,12 +64,16 @@ class VideoCell: UICollectionViewCell {
     }
 }
 
+
 // MARK: - Setup And Configure
+/// This extension provides setup and configuration methods for the `VideoCell`.
 extension VideoCell {
     
     // MARK: - Setup
 
     /// Sets up the UI components of the cell.
+    /// This method initializes the background color and adds subviews to the content view,
+    /// configuring their layout constraints for proper display.
     private func setupViews() {
         backgroundColor = .clear
         
@@ -126,6 +123,9 @@ extension VideoCell {
     
     // MARK: - Configuration
     /// Configures the cell with video information from an `AppMedia` instance.
+    ///
+    /// - Parameter video: An instance of `AppMedia` containing the video data.
+    /// This method sets the thumbnail image, title, and duration labels based on the provided video information.
     func configure(with video: AppMedia) {
         if let thumbnail = video.thumbnail {
             thumbnailImageView.image = UIImage(data: thumbnail)
@@ -138,4 +138,5 @@ extension VideoCell {
         durationLabel.text = String(format: "%02d:%02d", minutes, seconds)
     }
 }
+
 

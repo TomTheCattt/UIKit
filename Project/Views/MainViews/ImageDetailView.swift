@@ -4,7 +4,7 @@ import Photos
 
 // MARK: - ImageDetailView
 /// A custom view for displaying image.
-class ImageDetailView: UIView {
+final class ImageDetailView: UIView {
     // MARK: - Private Properties
     
     /// The media item being displayed
