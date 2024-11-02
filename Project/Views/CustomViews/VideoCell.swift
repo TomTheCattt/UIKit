@@ -107,6 +107,7 @@ extension VideoCell {
             
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 90),
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 35),
+            titleLabel.widthAnchor.constraint(equalTo: containerView.widthAnchor, multiplier: 0.5),
             
             durationLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 90),
             durationLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 60),

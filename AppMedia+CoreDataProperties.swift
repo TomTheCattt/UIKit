@@ -2,7 +2,7 @@
 //  AppMedia+CoreDataProperties.swift
 //  Project
 //
-//  Created by Việt Anh Nguyễn on 27/10/2024.
+//  Created by Việt Anh Nguyễn on 01/11/2024.
 //
 //
 
@@ -20,9 +20,9 @@ extension AppMedia {
     @NSManaged public var duration: Double
     @NSManaged public var id: UUID?
     @NSManaged public var localIdentifier: String?
+    @NSManaged public var mediaType: String?
     @NSManaged public var thumbnail: Data?
     @NSManaged public var title: String?
-    @NSManaged public var mediaType: String?
 
 }
 

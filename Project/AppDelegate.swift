@@ -16,6 +16,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
     
+    // MARK: - Application Memory Management
+    
+    /// Called when the application has received memory warning
+    func applicationDidReceiveMemoryWarning(_ application: UIApplication) {
+        lazy var dataManager = DataManager(context: self.persistentContainer.viewContext, mediaType: nil)
+        dataManager.clearCache()
+    }
+    
     /// The orientation lock setting for the application.
     var orientationLock: UIInterfaceOrientationMask = .all
     
@@ -45,7 +53,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// The persistent container for the application, encapsulating the Core Data stack.
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "Project")
-        container.loadPersistentStores { (storeDescription, error) in
+        container.loadPersistentStores { [weak self] (storeDescription, error) in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }

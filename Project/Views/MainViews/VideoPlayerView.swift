@@ -141,6 +141,9 @@ class VideoPlayerView: UIView {
     /// Button to go to the next video.
     private lazy var nextButton: UIButton = createButton(systemName: "forward.end.fill")
     
+    /// Property to track audio session state.
+    private var isAudioSessionActive = false
+    
     // MARK: - Callbacks
     /// Callback triggered when dismissing the video player.
     var onDismiss: (() -> Void)?
@@ -167,6 +170,9 @@ class VideoPlayerView: UIView {
         removeItemObserver()
         removeNotifications()
         controlsTimer?.invalidate()
+        cleanupAudioSession()
+        player?.replaceCurrentItem(with: nil)
+        player = nil
     }
     
     // MARK: - Layout
@@ -289,6 +295,8 @@ extension VideoPlayerView {
             return
         }
         
+        cleanupExistingPlayer()
+        
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         guard let asset = fetchResult.firstObject else {
             print("Error: Could not find PHAsset with identifier: \(localIdentifier)")
@@ -314,6 +322,16 @@ extension VideoPlayerView {
                 self.setupAudioSession()
             }
         }
+    }
+    
+    private func cleanupExistingPlayer() {
+        player?.pause()
+        playerItem = nil
+        player?.replaceCurrentItem(with: nil)
+        player = nil
+        removePeriodicTimeObserver()
+        removeItemObserver()
+        cleanupAudioSession()
     }
     
     /// Observes the status of the `AVPlayerItem` to handle different states such as ready to play, failed, or unknown.
@@ -345,11 +363,36 @@ extension VideoPlayerView {
     
     /// Configures the audio session for playback, allowing audio to play even when the device is in silent mode.
     private func setupAudioSession() {
+        guard !isAudioSessionActive else { return } // Prevent multiple activations
+        
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-            try AVAudioSession.sharedInstance().setActive(true)
+            let audioSession = AVAudioSession.sharedInstance()
+            
+            // Deactivate any existing session first
+            if audioSession.isOtherAudioPlaying {
+                try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            }
+            
+            // Configure and activate the session
+            try audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+            try audioSession.setActive(true)
+            isAudioSessionActive = true
+            
         } catch {
             print("Failed to setup audio session: \(error)")
+            isAudioSessionActive = false
+        }
+    }
+    
+    private func cleanupAudioSession() {
+        guard isAudioSessionActive else { return } // Only cleanup if active
+        
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            isAudioSessionActive = false
+        } catch {
+            print("Failed to cleanup audio session: \(error)")
         }
     }
     
@@ -455,6 +498,7 @@ extension VideoPlayerView {
     /// Resets the video playback to the beginning, updates the play/pause button to show the play icon, and makes the controls visible.
     private func resetPlayback() {
         player?.seek(to: .zero)
+        cleanupAudioSession()
         playPauseButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
         showControls()
     }
@@ -555,6 +599,7 @@ extension VideoPlayerView {
     /// Resets playback to the beginning and shows controls.
     @objc private func playerDidFinishPlaying() {
         DispatchQueue.main.async { [weak self] in
+            self?.cleanupAudioSession()
             self?.resetPlayback()
         }
     }
@@ -562,6 +607,7 @@ extension VideoPlayerView {
     /// Handles the event when the app enters the background.
     /// Pauses the video playback and updates the play button to display the play icon.
     @objc private func handleEnterBackground() {
+        cleanupAudioSession()
         player?.pause()
         playPauseButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
     }
@@ -584,6 +630,7 @@ extension VideoPlayerView {
     /// Action for when the back button is tapped: Pauses the video and triggers the onDismiss closure to exit the player.
     @objc private func backButtonTapped() {
         player?.pause()
+        cleanupAudioSession()
         onDismiss?()
     }
     
@@ -595,10 +642,12 @@ extension VideoPlayerView {
                currentTime >= duration {
                 player?.seek(to: .zero)
             }
+            setupAudioSession() // Ensure audio session is active before playing
             player?.play()
             playPauseButton.setImage(UIImage(systemName: "pause.fill"), for: .normal)
         } else {
             player?.pause()
+            cleanupAudioSession()
             playPauseButton.setImage(UIImage(systemName: "play.fill"), for: .normal)
         }
         showControls()
@@ -704,6 +753,21 @@ extension VideoPlayerView {
             print("Error generating image: \(error)")
             showErrorMessage()
         }
+    }
+}
+
+extension VideoPlayerView: UIApplicationDelegate {
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        player?.pause()
+        cleanupAudioSession()
+    }
+    
+    func applicationWillTerminate(_ application: UIApplication) {
+        cleanupExistingPlayer()
+    }
+    
+    func applicationWillResignActive(_ application: UIApplication) {
+        cleanupAudioSession()
     }
 }
 

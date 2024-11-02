@@ -134,7 +134,7 @@ class ListView: UIView {
             layout?.minimumInteritemSpacing = 0
             layout?.minimumLineSpacing = 2
         } else {
-            layout?.minimumLineSpacing = 1
+            layout?.minimumLineSpacing = 50
             layout?.minimumInteritemSpacing = 0
         }
     }

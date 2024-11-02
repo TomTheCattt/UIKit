@@ -19,7 +19,11 @@ class ListViewController: UIViewController {
     var selectedCategory: CategoryType?
     
     /// Manages data operations such as fetching and updating media items.
-    private var dataManager: DataManager!
+    private lazy var dataManager: DataManager = {
+        DispatchQueue.main.sync {
+            return DataManager(context: CoreDataManager.shared.context, mediaType: nil)
+        }
+    }()
     
     /// The data source holding media items retrieved from the database.
     private var dataSource: [NSManagedObject] = []
@@ -570,7 +574,7 @@ extension ListViewController: UICollectionViewDelegate, UICollectionViewDelegate
             return CGSize(width: (view.frame.width / 2) - 1, height: 200)
         } else {
             let width = collectionView.bounds.width - 32
-            return CGSize(width: width, height: 72)
+            return CGSize(width: width, height: 100)
         }
     }
     
