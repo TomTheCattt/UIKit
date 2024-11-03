@@ -4,7 +4,7 @@ import Photos
 
 // MARK: - HomeViewController
 /// `HomeViewController` manages the home screen of the application, allowing users to view and interact with media categories (images and videos).
-class HomeViewController: UIViewController {
+final class HomeViewController: UIViewController {
     
     // MARK: - Properties
     /// A delegate conforming to `HomeViewControllerDelegate` for handling menu actions.
